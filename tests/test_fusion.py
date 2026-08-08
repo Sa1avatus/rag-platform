@@ -9,9 +9,7 @@ class FusionTests(unittest.TestCase):
         shared = uuid.uuid4()
         vector_only = uuid.uuid4()
         lexical_only = uuid.uuid4()
-        scores = reciprocal_rank_fusion(
-            [[shared, vector_only], [shared, lexical_only]]
-        )
+        scores = reciprocal_rank_fusion([[shared, vector_only], [shared, lexical_only]])
         self.assertGreater(scores[shared], scores[vector_only])
         self.assertGreater(scores[shared], scores[lexical_only])
 

@@ -23,6 +23,10 @@ app.conf.update(
             "task": "rag_platform.worker.tasks.model_readiness_heartbeat",
             "schedule": 20.0,
         },
+        "reconcile-rag-indexes": {
+            "task": "rag_platform.worker.tasks.reconcile_indexes",
+            "schedule": 300.0,
+        },
     },
 )
 app.autodiscover_tasks(["rag_platform.worker"])

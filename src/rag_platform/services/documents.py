@@ -1,11 +1,12 @@
 import hashlib
-import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.api.schemas import DocumentCreate
 from rag_platform.core.auth import Principal
+from rag_platform.core.metrics import DOCUMENTS_RECEIVED
 from rag_platform.db.models import (
     Document,
     DocumentVersion,
@@ -46,6 +47,7 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
             collection=data.collection,
             external_document_id=data.external_document_id,
             current_version=data.version,
+            metadata_=data.metadata,
         )
         session.add(document)
         await session.flush()
@@ -57,6 +59,7 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
         )
         document.current_version = data.version
         document.lock_version += 1
+        document.metadata_ = data.metadata
     version = DocumentVersion(
         document_id=document.id,
         tenant_id=who.tenant_id,
@@ -75,9 +78,19 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
     )
     session.add(version)
     await session.flush()
+    await enqueue_indexing(session, version)
+    await session.commit()
+    DOCUMENTS_RECEIVED.inc()
+    return version
+
+
+async def enqueue_indexing(
+    session: AsyncSession,
+    version: DocumentVersion,
+) -> IndexingJob:
     job = IndexingJob(
-        tenant_id=who.tenant_id,
-        project_id=data.project_id,
+        tenant_id=version.tenant_id,
+        project_id=version.project_id,
         payload={
             "version_id": str(version.id),
             "status": "queued",
@@ -88,8 +101,8 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
     await session.flush()
     session.add(
         OutboxEvent(
-            tenant_id=who.tenant_id,
-            project_id=data.project_id,
+            tenant_id=version.tenant_id,
+            project_id=version.project_id,
             payload={
                 "type": "document.index",
                 "version_id": str(version.id),
@@ -98,5 +111,42 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
             },
         )
     )
+    return job
+
+
+async def enqueue_deletion(
+    session: AsyncSession,
+    document: Document,
+) -> IndexingJob:
+    document.deleted_at = datetime.now(UTC)
+    await session.execute(
+        update(DocumentVersion)
+        .where(DocumentVersion.document_id == document.id)
+        .values(status=Status.deleted, is_current=False)
+    )
+    job = IndexingJob(
+        tenant_id=document.tenant_id,
+        project_id=document.project_id,
+        payload={
+            "document_id": str(document.id),
+            "status": "queued",
+            "job_type": "document.delete",
+            "attempt": 0,
+        },
+    )
+    session.add(job)
+    await session.flush()
+    session.add(
+        OutboxEvent(
+            tenant_id=document.tenant_id,
+            project_id=document.project_id,
+            payload={
+                "type": "document.delete",
+                "document_id": str(document.id),
+                "job_id": str(job.id),
+                "attempts": 0,
+            },
+        )
+    )
     await session.commit()
-    return version
+    return job

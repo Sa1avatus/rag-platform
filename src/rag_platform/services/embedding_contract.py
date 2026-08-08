@@ -3,7 +3,5 @@ def validate_embedding_dimension(detected: int, configured: int) -> None:
         raise RuntimeError("embedding model reported an invalid dimension")
     if detected != configured:
         raise RuntimeError(
-            "embedding dimension mismatch: "
-            f"model={detected}, database_contract={configured}"
+            f"embedding dimension mismatch: model={detected}, database_contract={configured}"
         )
-

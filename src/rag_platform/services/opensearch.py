@@ -40,7 +40,7 @@ async def ensure_index(search_client: AsyncOpenSearch) -> None:
                     "chunk_id": {"type": "keyword"},
                     "content": {"type": "text"},
                     "language": {"type": "keyword"},
-                    "metadata": {"type": "flattened"},
+                    "metadata": {"type": "flat_object"},
                 },
             },
         },
@@ -53,11 +53,7 @@ async def index_chunks(documents: list[dict[str, Any]]) -> None:
         await ensure_index(search_client)
         lines: list[str] = []
         for document in documents:
-            lines.append(
-                json.dumps(
-                    {"index": {"_index": INDEX_NAME, "_id": document["chunk_id"]}}
-                )
-            )
+            lines.append(json.dumps({"index": {"_index": INDEX_NAME, "_id": document["chunk_id"]}}))
             lines.append(json.dumps(document, default=str))
         response = await search_client.bulk(body="\n".join(lines) + "\n", refresh=True)
         if response.get("errors"):
@@ -81,9 +77,7 @@ async def bm25_search(
         {"term": {"project_id": str(project_id)}},
         {"terms": {"collection": collections}},
     ]
-    clauses.extend(
-        {"term": {f"metadata.{key}": value}} for key, value in filters.items()
-    )
+    clauses.extend({"term": {f"metadata.{key}": value}} for key, value in filters.items())
     search_client = client()
     try:
         response = await search_client.search(
@@ -99,10 +93,40 @@ async def bm25_search(
             },
         )
         return [
-            (uuid.UUID(hit["_id"]), float(hit["_score"] or 0.0))
-            for hit in response["hits"]["hits"]
+            (uuid.UUID(hit["_id"]), float(hit["_score"] or 0.0)) for hit in response["hits"]["hits"]
         ]
     except (OpenSearchException, OSError, TimeoutError) as exc:
         raise OpenSearchUnavailable("OpenSearch search is unavailable") from exc
+    finally:
+        await search_client.close()
+
+
+async def delete_document_chunks(
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    document_id: uuid.UUID,
+) -> None:
+    search_client = client()
+    try:
+        if not await search_client.indices.exists(index=INDEX_NAME):
+            return
+        await search_client.delete_by_query(
+            index=INDEX_NAME,
+            body={
+                "query": {
+                    "bool": {
+                        "filter": [
+                            {"term": {"tenant_id": str(tenant_id)}},
+                            {"term": {"project_id": str(project_id)}},
+                            {"term": {"document_id": str(document_id)}},
+                        ]
+                    }
+                }
+            },
+            refresh=True,
+            conflicts="proceed",
+        )
+    except (OpenSearchException, OSError, TimeoutError) as exc:
+        raise OpenSearchUnavailable("OpenSearch deletion is unavailable") from exc
     finally:
         await search_client.close()

@@ -24,7 +24,9 @@ def test_chunker_is_deterministic_and_overlaps() -> None:
 
 def test_principal_rejects_cross_tenant_scope() -> None:
     allowed = uuid.uuid4()
-    who = Principal(uuid.uuid4(), frozenset({allowed}), frozenset({"public"}), frozenset({"retrieval:search"}))
+    who = Principal(
+        uuid.uuid4(), frozenset({allowed}), frozenset({"public"}), frozenset({"retrieval:search"})
+    )
     with pytest.raises(HTTPException) as error:
         who.authorize(uuid.uuid4(), ["public"], "retrieval:search")
     assert error.value.status_code == 403
@@ -32,7 +34,9 @@ def test_principal_rejects_cross_tenant_scope() -> None:
 
 def test_principal_requires_permission_and_collection() -> None:
     project = uuid.uuid4()
-    who = Principal(uuid.uuid4(), frozenset({project}), frozenset({"public"}), frozenset({"documents:read"}))
+    who = Principal(
+        uuid.uuid4(), frozenset({project}), frozenset({"public"}), frozenset({"documents:read"})
+    )
     with pytest.raises(HTTPException):
         who.authorize(project, ["private"], "documents:read")
     with pytest.raises(HTTPException):

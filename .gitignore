@@ -5,7 +5,9 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 htmlcov/
+.coverage
 coverage.xml
 web/node_modules/
 web/dist/
+web/*.tsbuildinfo
 *.pyc

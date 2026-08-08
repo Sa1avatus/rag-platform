@@ -1,4 +1,5 @@
 import json
+import time
 from functools import lru_cache
 
 from celery.signals import worker_process_init
@@ -6,6 +7,7 @@ from redis import Redis
 from sentence_transformers import SentenceTransformer
 
 from rag_platform.core.config import get_settings
+from rag_platform.core.metrics import EMBEDDING_BATCH_SIZE, EMBEDDING_DURATION
 from rag_platform.services.embedding_contract import validate_embedding_dimension
 from rag_platform.services.readiness import MODEL_READY_KEY
 
@@ -17,12 +19,17 @@ def model() -> SentenceTransformer:
 
 
 def embed(texts: list[str]) -> list[list[float]]:
-    vectors = model().encode(
-        texts,
-        batch_size=get_settings().embedding_batch_size,
-        normalize_embeddings=True,
-    )
-    return vectors.tolist()
+    EMBEDDING_BATCH_SIZE.observe(len(texts))
+    started = time.perf_counter()
+    try:
+        vectors = model().encode(
+            texts,
+            batch_size=get_settings().embedding_batch_size,
+            normalize_embeddings=True,
+        )
+    finally:
+        EMBEDDING_DURATION.observe(time.perf_counter() - started)
+    return [[float(component) for component in vector] for vector in vectors.tolist()]
 
 
 def dimension() -> int:

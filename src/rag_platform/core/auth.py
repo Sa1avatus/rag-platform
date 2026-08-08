@@ -20,7 +20,11 @@ class Principal:
     permissions: frozenset[str]
 
     def authorize(self, project_id: uuid.UUID, collections: list[str], permission: str) -> None:
-        if project_id not in self.project_ids or not set(collections) <= self.collections or permission not in self.permissions:
+        if (
+            project_id not in self.project_ids
+            or not set(collections) <= self.collections
+            or permission not in self.permissions
+        ):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="scope denied")
 
 
@@ -34,10 +38,19 @@ async def principal(
 ) -> Principal:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="bearer token required")
-    row = await session.scalar(select(ApiKey).where(ApiKey.key_hash == hash_key(authorization[7:]), ApiKey.revoked.is_(False)))
+    row = await session.scalar(
+        select(ApiKey).where(
+            ApiKey.key_hash == hash_key(authorization[7:]), ApiKey.revoked.is_(False)
+        )
+    )
     if row is None:
         raise HTTPException(status_code=401, detail="invalid API key")
-    return Principal(row.tenant_id, frozenset(row.allowed_project_ids), frozenset(row.allowed_collections), frozenset(row.permissions))
+    return Principal(
+        row.tenant_id,
+        frozenset(row.allowed_project_ids),
+        frozenset(row.allowed_collections),
+        frozenset(row.permissions),
+    )
 
 
 async def admin(authorization: str = Header()) -> None:

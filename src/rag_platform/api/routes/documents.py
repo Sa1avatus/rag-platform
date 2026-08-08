@@ -1,7 +1,6 @@
 import json
 import uuid
 from contextlib import suppress
-from datetime import UTC, datetime
 from pathlib import PurePath
 from typing import Annotated, Any, cast
 
@@ -12,10 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_platform.api.schemas import DocumentCreate, DocumentRead, UploadRead
 from rag_platform.core.auth import Principal, principal
 from rag_platform.core.config import get_settings
-from rag_platform.db.models import Document, DocumentBlob, DocumentVersion
+from rag_platform.db.models import Document, DocumentBlob, DocumentVersion, Status
 from rag_platform.db.session import get_session
 from rag_platform.services.blobs import object_key, put, remove
-from rag_platform.services.documents import ingest
+from rag_platform.services.documents import enqueue_deletion, enqueue_indexing, ingest
 from rag_platform.services.extraction import extract
 from rag_platform.services.source_safety import UnsafeSourceError
 
@@ -160,5 +159,35 @@ async def delete(
     if row is None:
         raise HTTPException(404, "document not found")
     who.authorize(row.project_id, [row.collection], "documents:delete")
-    row.deleted_at = datetime.now(UTC)
+    await enqueue_deletion(session, row)
+
+
+@router.post("/{document_id}/reindex", status_code=202)
+async def reindex(
+    document_id: uuid.UUID,
+    who: Principal = Depends(principal),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    document = await session.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.tenant_id == who.tenant_id,
+            Document.deleted_at.is_(None),
+        )
+    )
+    if document is None:
+        raise HTTPException(404, "document not found")
+    who.authorize(document.project_id, [document.collection], "admin:reindex")
+    version = await session.scalar(
+        select(DocumentVersion).where(
+            DocumentVersion.document_id == document.id,
+            DocumentVersion.version == document.current_version,
+        )
+    )
+    if version is None:
+        raise HTTPException(409, "current document version is missing")
+    version.status = Status.queued
+    version.error = None
+    job = await enqueue_indexing(session, version)
     await session.commit()
+    return {"job_id": job.id, "status": "queued"}

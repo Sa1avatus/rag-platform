@@ -2,8 +2,8 @@
 
 Revision ID: 0001
 """
-from alembic import op
 
+from alembic import op
 from rag_platform.db.models import Base
 
 revision = "0001"

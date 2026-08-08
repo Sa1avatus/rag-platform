@@ -84,3 +84,29 @@ class ContextResponse(BaseModel):
     request_id: uuid.UUID
     sources: list[dict[str, Any]]
     context: str
+
+
+class EvaluationCaseInput(BaseModel):
+    query: str = Field(min_length=1, max_length=10_000)
+    filters: dict[str, Any] = Field(default_factory=dict)
+    expected_document_ids: list[str] = Field(default_factory=list)
+    expected_chunk_ids: list[str] = Field(default_factory=list)
+    relevance_grades: dict[str, int] = Field(default_factory=dict)
+    forbidden_results: list[str] = Field(default_factory=list)
+
+
+class EvaluationDatasetCreate(BaseModel):
+    project_id: uuid.UUID
+    name: str = Field(min_length=1, max_length=200)
+    version: int = Field(default=1, ge=1)
+    collections: list[str] = Field(min_length=1)
+    cases: list[EvaluationCaseInput] = Field(min_length=1)
+
+
+class EvaluationRunCreate(BaseModel):
+    dataset_id: uuid.UUID
+    vector_top_k: int = Field(default=30, ge=1, le=200)
+    bm25_top_k: int = Field(default=30, ge=1, le=200)
+    fusion_top_k: int = Field(default=20, ge=1, le=100)
+    rerank_top_k: int = Field(default=5, ge=1, le=50)
+    use_reranker: bool = True

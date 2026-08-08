@@ -1,21 +1,11 @@
 from datetime import UTC, datetime
-from typing import Any
 
 from celery import current_app
 from sqlalchemy import select
 
 from rag_platform.db.models import OutboxEvent
 from rag_platform.db.session import Session
-
-
-def index_message(payload: dict[str, Any]) -> tuple[str, list[str]]:
-    if payload.get("type") != "document.index":
-        raise ValueError("unsupported outbox event type")
-    version_id = payload.get("version_id")
-    job_id = payload.get("job_id")
-    if not isinstance(version_id, str) or not isinstance(job_id, str):
-        raise ValueError("outbox event is missing identifiers")
-    return "rag_platform.worker.tasks.index_document", [version_id, job_id]
+from rag_platform.services.outbox_contract import event_message
 
 
 async def publish_pending(limit: int = 100) -> int:
@@ -31,7 +21,7 @@ async def publish_pending(limit: int = 100) -> int:
             )
         ).all()
         for row in rows:
-            task_name, args = index_message(row.payload)
+            task_name, args = event_message(row.payload)
             current_app.send_task(task_name, args=args, task_id=str(row.id))
             row.payload = {
                 **row.payload,

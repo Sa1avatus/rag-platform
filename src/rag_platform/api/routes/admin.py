@@ -22,6 +22,8 @@ from rag_platform.db.models import (
     Project,
 )
 from rag_platform.db.session import get_session
+from rag_platform.services.health import system_health
+from rag_platform.services.reconciliation import reconcile
 from rag_platform.services.retrieval import search
 
 router = APIRouter(
@@ -47,9 +49,7 @@ async def create_project(
 async def projects(
     session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, object]]:
-    rows = (
-        await session.scalars(select(Project).order_by(Project.created_at.desc()))
-    ).all()
+    rows = (await session.scalars(select(Project).order_by(Project.created_at.desc()))).all()
     return [
         {
             "id": row.id,
@@ -60,6 +60,17 @@ async def projects(
         }
         for row in rows
     ]
+
+
+@router.post("/projects/{project_id}/reconcile", status_code=202)
+async def reconcile_project(
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, int]:
+    project = await session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(404, "project not found")
+    return await reconcile(session, project.id)
 
 
 @router.post("/api-keys", status_code=201)
@@ -146,17 +157,19 @@ async def retry_indexing_job(
         raise HTTPException(404, "indexing job not found")
     if job.payload.get("status") not in {"failed", "dead_letter"}:
         raise HTTPException(409, "only failed or dead-letter jobs can be retried")
-    version_id = job.payload.get("version_id")
-    if not isinstance(version_id, str):
-        raise HTTPException(409, "indexing job has no document version")
+    job_type = job.payload.get("job_type", "document.index")
+    identifier_field = "document_id" if job_type == "document.delete" else "version_id"
+    identifier = job.payload.get(identifier_field)
+    if not isinstance(identifier, str):
+        raise HTTPException(409, "indexing job has no target identifier")
     job.payload = {**job.payload, "status": "queued", "error": None}
     session.add(
         OutboxEvent(
             tenant_id=job.tenant_id,
             project_id=job.project_id,
             payload={
-                "type": "document.index",
-                "version_id": version_id,
+                "type": job_type,
+                identifier_field: identifier,
                 "job_id": str(job.id),
                 "attempts": 0,
             },
@@ -194,10 +207,7 @@ async def dashboard(
 
 @router.get("/system/health")
 async def health() -> dict[str, object]:
-    return {
-        "status": "operational",
-        "components": [{"name": "rag-api", "status": "up"}],
-    }
+    return await system_health()
 
 
 @router.get("/settings")

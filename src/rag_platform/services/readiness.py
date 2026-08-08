@@ -45,4 +45,3 @@ async def readiness_status() -> tuple[bool, dict[str, Any]]:
     finally:
         await cache.aclose()
     return database_ready and redis_ready and model_ready, components
-
