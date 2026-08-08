@@ -3,15 +3,21 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DEFAULT_
 RUN useradd --create-home --uid 10001 rag
 WORKDIR /app
 COPY pyproject.toml README.md ./
-COPY src ./src
 
 FROM base AS api
-RUN pip install .
+RUN mkdir -p src/rag_platform && touch src/rag_platform/__init__.py && pip install .
+COPY src ./src
+RUN pip install --no-deps .
 USER rag
 CMD ["uvicorn", "rag_platform.main:app", "--host", "0.0.0.0", "--port", "8100"]
 
 FROM base AS worker
 RUN pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2,<3" \
+    && mkdir -p src/rag_platform \
+    && touch src/rag_platform/__init__.py \
     && pip install ".[worker]"
+COPY src ./src
+RUN pip install --no-deps .
+RUN mkdir -p /home/rag/.cache/huggingface && chown -R rag:rag /home/rag/.cache
 USER rag
-CMD ["celery", "-A", "rag_platform.worker.celery_app", "worker", "--beat", "--schedule=/tmp/celerybeat-schedule", "--queues=indexing,search", "--loglevel=INFO", "--concurrency=2"]
+CMD ["celery", "-A", "rag_platform.worker.celery_app", "worker", "--beat", "--schedule=/tmp/celerybeat-schedule", "--queues=indexing,search", "--loglevel=INFO", "--concurrency=1"]

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from rag_platform.db.models import OutboxEvent
-from rag_platform.worker import embeddings, outbox
+from rag_platform.worker import embeddings, outbox, tasks
 
 
 class FakeVectors:
@@ -106,3 +106,18 @@ async def test_publish_pending_marks_and_dispatches(monkeypatch: pytest.MonkeyPa
     assert "published_at" in event.payload
     assert sent[0][2] == str(event.id)
     assert session.committed is True
+
+
+def test_run_async_disposes_shared_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    disposed: list[bool] = []
+
+    class Engine:
+        async def dispose(self) -> None:
+            disposed.append(True)
+
+    async def value() -> int:
+        return 42
+
+    monkeypatch.setattr(tasks, "engine", Engine())
+    assert tasks.run_async(value()) == 42
+    assert disposed == [True]

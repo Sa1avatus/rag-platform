@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 import uuid
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 
 from celery import shared_task
@@ -19,7 +20,7 @@ from rag_platform.db.models import (
     IndexingJob,
     Status,
 )
-from rag_platform.db.session import Session
+from rag_platform.db.session import Session, engine
 from rag_platform.services.opensearch import (
     OpenSearchUnavailable,
     delete_document_chunks,
@@ -30,6 +31,16 @@ from rag_platform.services.reconciliation import reconcile
 from rag_platform.worker.embeddings import dimension, embed
 from rag_platform.worker.evaluation import evaluate_run
 from rag_platform.worker.outbox import publish_pending
+
+
+def run_async[T](awaitable: Awaitable[T]) -> T:
+    async def isolated() -> T:
+        try:
+            return await awaitable
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(isolated())
 
 
 def chunks(
@@ -226,7 +237,7 @@ async def delete_derivatives(document_id: uuid.UUID, job_id: uuid.UUID) -> None:
     max_retries=5,
 )
 def index_document(self: object, version_id: str, job_id: str) -> None:
-    asyncio.run(index_version(uuid.UUID(version_id), uuid.UUID(job_id)))
+    run_async(index_version(uuid.UUID(version_id), uuid.UUID(job_id)))
 
 
 @shared_task(
@@ -241,7 +252,7 @@ def delete_document_derivatives(
     document_id: str,
     job_id: str,
 ) -> None:
-    asyncio.run(delete_derivatives(uuid.UUID(document_id), uuid.UUID(job_id)))
+    run_async(delete_derivatives(uuid.UUID(document_id), uuid.UUID(job_id)))
 
 
 @shared_task(
@@ -251,7 +262,7 @@ def delete_document_derivatives(
     max_retries=10,
 )
 def dispatch_outbox() -> int:
-    return asyncio.run(publish_pending())
+    return run_async(publish_pending())
 
 
 @shared_task
@@ -282,9 +293,9 @@ def reconcile_indexes() -> dict[str, int]:
         async with Session() as session:
             return await reconcile(session)
 
-    return asyncio.run(run())
+    return run_async(run())
 
 
 @shared_task
 def run_evaluation_task(run_id: str) -> None:
-    asyncio.run(evaluate_run(uuid.UUID(run_id)))
+    run_async(evaluate_run(uuid.UUID(run_id)))

@@ -17,12 +17,13 @@ services:
     build:
       context: .
       target: worker
-    command: celery -A rag_platform.worker.celery_app worker --beat --schedule=/tmp/celerybeat-schedule --queues=indexing,search --loglevel=INFO --concurrency=2
+    command: celery -A rag_platform.worker.celery_app worker --beat --schedule=/tmp/celerybeat-schedule --queues=indexing,search --loglevel=INFO --concurrency=1
     env_file: .env
     depends_on:
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
       rag-minio: {condition: service_healthy}
+    volumes: ["rag_model_cache:/home/rag/.cache/huggingface"]
     restart: unless-stopped
     stop_grace_period: 60s
     deploy: {resources: {limits: {memory: 6G}}}
@@ -65,4 +66,4 @@ services:
     volumes: ["rag_minio:/data"]
     healthcheck: {test: ["CMD", "mc", "ready", "local"], interval: 5s, timeout: 3s, retries: 20}
     restart: unless-stopped
-volumes: {rag_postgres: {}, rag_opensearch: {}, rag_redis: {}, rag_minio: {}}
+volumes: {rag_postgres: {}, rag_opensearch: {}, rag_redis: {}, rag_minio: {}, rag_model_cache: {}}
