@@ -1,7 +1,9 @@
 name: rag-platform
 services:
   rag-api:
-    build: .
+    build:
+      context: .
+      target: api
     command: uvicorn rag_platform.main:app --host 0.0.0.0 --port 8100
     env_file: .env
     ports: ["127.0.0.1:8100:8100"]
@@ -12,8 +14,10 @@ services:
     restart: unless-stopped
     deploy: {resources: {limits: {memory: 1G}}}
   rag-indexing-worker:
-    build: .
-    command: celery -A rag_platform.worker.celery_app worker --beat --queues=indexing,search --loglevel=INFO --concurrency=2
+    build:
+      context: .
+      target: worker
+    command: celery -A rag_platform.worker.celery_app worker --beat --schedule=/tmp/celerybeat-schedule --queues=indexing,search --loglevel=INFO --concurrency=2
     env_file: .env
     depends_on:
       rag-postgres: {condition: service_healthy}
