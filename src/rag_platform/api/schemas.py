@@ -1,0 +1,86 @@
+import uuid
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class DocumentCreate(BaseModel):
+    project_id: uuid.UUID
+    collection: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{0,99}$")
+    external_document_id: str = Field(min_length=1, max_length=300)
+    document_type: str = "text"
+    title: str = ""
+    content: str = Field(min_length=1)
+    language: str = "und"
+    version: int = Field(default=1, ge=1)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentRead(BaseModel):
+    id: uuid.UUID
+    external_document_id: str
+    version: int
+    status: str
+    content_hash: str
+
+
+class UploadRead(BaseModel):
+    documents: list[DocumentRead]
+    source_object_key: str
+
+
+class SearchRequest(BaseModel):
+    project_id: uuid.UUID
+    collections: list[str] = Field(min_length=1)
+    query: str = Field(min_length=1, max_length=10_000)
+    filters: dict[str, Any] = Field(default_factory=dict)
+    vector_top_k: int = Field(default=30, ge=1, le=200)
+    bm25_top_k: int = Field(default=30, ge=1, le=200)
+    fusion_top_k: int = Field(default=20, ge=1, le=100)
+    rerank_top_k: int = Field(default=5, ge=1, le=50)
+    use_reranker: bool = True
+    include_parent_content: bool = True
+    include_trace: bool = False
+
+
+class SearchResult(BaseModel):
+    request_id: uuid.UUID
+    results: list[dict[str, Any]]
+    trace: dict[str, Any] | None = None
+
+
+class FeedbackCreate(BaseModel):
+    project_id: uuid.UUID
+    request_id: uuid.UUID
+    chunk_id: uuid.UUID
+    relevant: bool
+    relevance_grade: int | None = Field(default=None, ge=0, le=3)
+    comment: str = Field(default="", max_length=2000)
+
+
+class ProjectCreate(BaseModel):
+    tenant_id: uuid.UUID
+    slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,99}$")
+    name: str
+    description: str = ""
+
+
+class ApiKeyCreate(BaseModel):
+    tenant_id: uuid.UUID
+    allowed_project_ids: list[uuid.UUID]
+    allowed_collections: list[str]
+    permissions: list[str]
+
+
+class CollectionCreate(BaseModel):
+    tenant_id: uuid.UUID
+    project_id: uuid.UUID
+    name: str
+    description: str = ""
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class ContextResponse(BaseModel):
+    request_id: uuid.UUID
+    sources: list[dict[str, Any]]
+    context: str
