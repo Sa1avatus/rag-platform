@@ -16,7 +16,10 @@ def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     bind = op.get_bind()
     Base.metadata.create_all(bind=bind)
-    op.execute("CREATE INDEX IF NOT EXISTS ix_chunk_embeddings_hnsw ON chunk_embeddings USING hnsw (embedding vector_cosine_ops)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_chunk_embeddings_hnsw "
+        "ON chunk_embeddings USING hnsw (embedding vector_cosine_ops)"
+    )
 
 
 def downgrade() -> None:

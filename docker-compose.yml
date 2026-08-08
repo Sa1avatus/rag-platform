@@ -13,7 +13,7 @@ services:
     deploy: {resources: {limits: {memory: 1G}}}
   rag-indexing-worker:
     build: .
-    command: celery -A rag_platform.worker.celery_app worker --beat --loglevel=INFO --concurrency=2
+    command: celery -A rag_platform.worker.celery_app worker --beat --queues=indexing,search --loglevel=INFO --concurrency=2
     env_file: .env
     depends_on:
       rag-postgres: {condition: service_healthy}

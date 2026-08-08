@@ -143,7 +143,7 @@ class ChunkEmbedding(Base, TimestampMixin):
     chunk_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chunks.id", ondelete="CASCADE"), index=True)
     model: Mapped[str] = mapped_column(String(300))
     model_revision: Mapped[str] = mapped_column(String(200), default="default")
-    embedding: Mapped[list[float]] = mapped_column(Vector())
+    embedding: Mapped[list[float]] = mapped_column(Vector(1024))
 
 
 class EventRecord(Base, TimestampMixin):

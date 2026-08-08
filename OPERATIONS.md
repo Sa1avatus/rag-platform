@@ -22,3 +22,7 @@ An OpenSearch outage does not fail PostgreSQL indexing. Affected versions remain
 `partially_indexed`, indexing jobs finish as `completed_degraded`, and retrieval traces set
 `opensearch_degraded=true`. After recovery, replay partially indexed versions or rebuild the
 versioned index from PostgreSQL before switching the read alias.
+
+`/health/ready` returns 200 only when PostgreSQL and Redis respond and a compatible embedding worker
+has refreshed its readiness heartbeat within 60 seconds. It returns component-safe error class names
+without connection strings or credentials. `/health/live` remains process-only liveness.

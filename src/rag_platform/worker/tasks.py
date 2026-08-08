@@ -1,10 +1,12 @@
 import asyncio
 import hashlib
+import json
 import re
 import uuid
 from datetime import UTC, datetime
 
 from celery import shared_task
+from redis import Redis
 from sqlalchemy import delete, select
 
 from rag_platform.core.config import get_settings
@@ -17,6 +19,7 @@ from rag_platform.db.models import (
 )
 from rag_platform.db.session import Session
 from rag_platform.services.opensearch import OpenSearchUnavailable, index_chunks
+from rag_platform.services.readiness import MODEL_READY_KEY
 from rag_platform.worker.embeddings import dimension, embed
 from rag_platform.worker.outbox import publish_pending
 
@@ -186,3 +189,25 @@ def index_document(self: object, version_id: str, job_id: str) -> None:
 )
 def dispatch_outbox() -> int:
     return asyncio.run(publish_pending())
+
+
+@shared_task
+def embed_query(query: str) -> list[float]:
+    return embed([query])[0]
+
+
+@shared_task
+def model_readiness_heartbeat() -> dict[str, object]:
+    settings = get_settings()
+    detected = dimension()
+    payload: dict[str, object] = {
+        "model": settings.embedding_model,
+        "dimension": detected,
+        "device": settings.embedding_device,
+    }
+    cache = Redis.from_url(settings.redis_url, decode_responses=True)
+    try:
+        cache.set(MODEL_READY_KEY, json.dumps(payload), ex=60)
+    finally:
+        cache.close()
+    return payload

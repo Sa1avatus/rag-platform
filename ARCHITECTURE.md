@@ -27,3 +27,13 @@ PostgreSQL commits chunks and embeddings before OpenSearch indexing. Until BM25 
 the document remains `partially_indexed` but is available to the PostgreSQL retrieval path.
 OpenSearch uses a strict shared mapping and every index and search operation carries exact tenant,
 project, and collection fields. It is rebuildable from PostgreSQL and never authoritative.
+
+The API never loads the embedding model. Retrieval sends the normalized query to the Celery
+`search` queue, where the already loaded worker model returns a normalized vector. The API then
+executes tenant-scoped cosine ordering in pgvector. Loss of the query embedding worker makes vector
+search impossible and returns 503; loss of OpenSearch only disables BM25.
+
+The default BGE-M3 profile uses `vector(1024)` so PostgreSQL can build its HNSW cosine index. Every
+worker process detects the loaded model dimension and compares it with this database contract before
+accepting work. A periodic Redis heartbeat exposes model name, dimension and device to readiness
+without loading the model in `rag-api`.

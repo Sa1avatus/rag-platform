@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-m3"
     embedding_device: str = "cpu"
     embedding_batch_size: int = 16
+    embedding_dimension: int = Field(default=1024, ge=1)
+    query_embedding_timeout_seconds: float = 30
     document_max_bytes: int = 25 * 1024 * 1024
     reranker_base_url: str = "http://reranker-service:8200"
     reranker_timeout_seconds: float = 8

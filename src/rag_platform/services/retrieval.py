@@ -12,6 +12,8 @@ from rag_platform.core.config import get_settings
 from rag_platform.db.models import Chunk, Document, RetrievalRequest
 from rag_platform.services.fusion import reciprocal_rank_fusion
 from rag_platform.services.opensearch import OpenSearchUnavailable, bm25_search
+from rag_platform.services.query_embeddings import embed_query
+from rag_platform.services.vector_search import vector_search
 
 ChunkRow = tuple[Chunk, str]
 
@@ -52,10 +54,21 @@ async def search(
     started = time.perf_counter()
     who.authorize(data.project_id, data.collections, "retrieval:search")
     statement = scoped_statement(who, data)
-    vector_rows = (
-        await session.execute(statement.limit(data.vector_top_k))
-    ).all()
-    vector_ids = [row[0].id for row in vector_rows]
+    settings = get_settings()
+    query_vector = await embed_query(data.query)
+    vector_hits = await vector_search(
+        session,
+        who.tenant_id,
+        data.project_id,
+        data.collections,
+        data.filters,
+        query_vector,
+        settings.embedding_model,
+        data.vector_top_k,
+    )
+    vector_rows = [(chunk, external_id) for chunk, external_id, _ in vector_hits]
+    vector_ids = [chunk.id for chunk, _, _ in vector_hits]
+    vector_scores = {chunk.id: score for chunk, _, score in vector_hits}
 
     opensearch_degraded = False
     bm25_scores: dict[uuid.UUID, float] = {}
@@ -93,7 +106,6 @@ async def search(
 
     reranker_degraded = False
     reranker_used = False
-    settings = get_settings()
     if data.use_reranker and settings.reranker_enabled and ranked:
         try:
             async with httpx.AsyncClient(
@@ -125,6 +137,7 @@ async def search(
             "chunk_id": str(chunk.id),
             "content": chunk.content,
             "metadata": chunk.metadata_,
+            "vector_score": vector_scores.get(chunk.id),
             "bm25_score": bm25_scores.get(chunk.id),
             "fusion_score": fusion_scores[chunk.id],
             "final_score": fusion_scores[chunk.id],
