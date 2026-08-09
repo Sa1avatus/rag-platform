@@ -148,15 +148,27 @@ async def indexing_jobs(
     if status:
         statement = statement.where(IndexingJob.payload["status"].astext == status)
     rows = (await session.scalars(statement)).all()
-    return [
-        {
-            "id": row.id,
-            "tenant_id": row.tenant_id,
-            "project_id": row.project_id,
-            **row.payload,
-        }
-        for row in rows
-    ]
+    return [_indexing_job_read(row) for row in rows]
+
+
+def _indexing_job_read(row: IndexingJob) -> dict[str, object]:
+    return {
+        "id": row.id,
+        "tenant_id": row.tenant_id,
+        "project_id": row.project_id,
+        **row.payload,
+    }
+
+
+@router.get("/indexing/jobs/{job_id}")
+async def indexing_job(
+    job_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(IndexingJob, job_id)
+    if row is None:
+        raise HTTPException(404, "indexing job not found")
+    return _indexing_job_read(row)
 
 
 @router.post("/indexing/jobs/{job_id}/retry", status_code=202)

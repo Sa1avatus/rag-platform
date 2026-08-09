@@ -121,6 +121,29 @@ async def test_retry_and_cancel_indexing_jobs() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_indexing_job() -> None:
+    tenant_id, project_id, job_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = IndexingJob(
+        id=job_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={"status": "completed", "chunks": 4},
+    )
+    result = await admin.indexing_job(job_id, FakeSession(scalar_values=[row]))
+    assert result == {
+        "id": job_id,
+        "tenant_id": tenant_id,
+        "project_id": project_id,
+        "status": "completed",
+        "chunks": 4,
+    }
+
+    with pytest.raises(HTTPException) as error:
+        await admin.indexing_job(job_id, FakeSession(scalar_values=[None]))
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_retry_rejects_invalid_job_states() -> None:
     job = IndexingJob(id=uuid.uuid4(), payload={"status": "running"})
     with pytest.raises(HTTPException) as error:
