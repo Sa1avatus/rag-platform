@@ -8,7 +8,13 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_platform.api.schemas import DocumentBatchCreate, DocumentCreate, DocumentRead, UploadRead
+from rag_platform.api.schemas import (
+    DocumentBatchCreate,
+    DocumentCreate,
+    DocumentRead,
+    DocumentUpdate,
+    UploadRead,
+)
 from rag_platform.core.auth import Principal, principal
 from rag_platform.core.config import get_settings
 from rag_platform.db.models import Chunk, Document, DocumentBlob, DocumentVersion, Status
@@ -166,6 +172,7 @@ async def list_documents(
             "collection": row.collection,
             "external_document_id": row.external_document_id,
             "current_version": row.current_version,
+            "lock_version": row.lock_version,
             "metadata": row.metadata_,
         }
         for row in rows
@@ -193,7 +200,59 @@ async def get(
         "id": row.id,
         "external_document_id": row.external_document_id,
         "current_version": row.current_version,
+        "lock_version": row.lock_version,
     }
+
+
+@router.patch("/{document_id}", response_model=DocumentRead, status_code=202)
+async def update_document(
+    document_id: uuid.UUID,
+    data: DocumentUpdate,
+    who: Principal = Depends(principal),
+    session: AsyncSession = Depends(get_session),
+) -> DocumentRead:
+    document = await session.scalar(
+        select(Document)
+        .where(
+            Document.id == document_id,
+            Document.tenant_id == who.tenant_id,
+            Document.project_id.in_(who.project_ids),
+            Document.deleted_at.is_(None),
+        )
+        .with_for_update()
+    )
+    if document is None:
+        raise HTTPException(404, "document not found")
+    who.authorize(document.project_id, [document.collection], "documents:write")
+    if document.lock_version != data.expected_lock_version:
+        raise HTTPException(409, "document lock version conflict")
+    current = await session.scalar(
+        select(DocumentVersion).where(
+            DocumentVersion.document_id == document.id,
+            DocumentVersion.version == document.current_version,
+        )
+    )
+    if current is None:
+        raise HTTPException(409, "current document version is missing")
+    try:
+        version = await ingest(
+            session,
+            who,
+            DocumentCreate(
+                project_id=document.project_id,
+                collection=document.collection,
+                external_document_id=document.external_document_id,
+                document_type=data.document_type or current.document_type,
+                title=data.title if data.title is not None else current.title,
+                content=data.content,
+                language=data.language or current.language,
+                version=document.current_version + 1,
+                metadata=data.metadata if data.metadata is not None else document.metadata_,
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return _document_read(version)
 
 
 @router.get("/{document_id}/chunks")

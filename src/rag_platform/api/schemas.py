@@ -28,6 +28,15 @@ class DocumentBatchCreate(BaseModel):
     documents: list[DocumentCreate] = Field(min_length=1, max_length=100)
 
 
+class DocumentUpdate(BaseModel):
+    expected_lock_version: int = Field(ge=1)
+    content: str = Field(min_length=1)
+    title: str | None = None
+    document_type: str | None = None
+    language: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
 class UploadRead(BaseModel):
     documents: list[DocumentRead]
     source_object_key: str

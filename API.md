@@ -30,3 +30,8 @@ administrative API. An authorized key alone cannot create an implicit collection
 `POST /v1/documents/batch` accepts `{"documents": [...]}` with 1 to 100 document payloads and
 returns accepted versions in input order. The operation is intentionally non-atomic: processing
 stops on the first `409`, while documents accepted before that failure remain committed and queued.
+
+`PATCH /v1/documents/{document_id}` creates the next immutable version and requires
+`expected_lock_version` plus new `content`. Optional title, type, language, and metadata values
+inherit from the current document when omitted. Document list and detail responses expose the
+current `lock_version`; stale writers receive `409`.

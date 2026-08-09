@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException, UploadFile
 
 from rag_platform.api.routes import documents
-from rag_platform.api.schemas import DocumentBatchCreate, DocumentCreate
+from rag_platform.api.schemas import DocumentBatchCreate, DocumentCreate, DocumentUpdate
 from rag_platform.core.auth import Principal
 from rag_platform.db.models import Chunk, Document, DocumentVersion, IndexingJob, Status
 from rag_platform.services.extraction import ExtractedDocument
@@ -149,10 +149,12 @@ async def test_get_and_delete_document(monkeypatch: pytest.MonkeyPatch) -> None:
         collection="manuals",
         external_document_id="guide-1",
         current_version=2,
+        lock_version=1,
     )
     who = scoped_principal(tenant_id, project_id, "documents:read", "documents:delete")
     result = await documents.get(document_id, who, FakeSession([row]))
     assert result["current_version"] == 2
+    assert result["lock_version"] == 1
 
     deleted: list[Document] = []
 
@@ -178,6 +180,7 @@ async def test_list_documents_and_chunks_are_scoped() -> None:
         collection="manuals",
         external_document_id="guide-1",
         current_version=1,
+        lock_version=1,
         metadata_={"topic": "operations"},
     )
     who = scoped_principal(tenant_id, project_id, "documents:read")
@@ -191,6 +194,7 @@ async def test_list_documents_and_chunks_are_scoped() -> None:
             "collection": "manuals",
             "external_document_id": "guide-1",
             "current_version": 1,
+            "lock_version": 1,
             "metadata": {"topic": "operations"},
         }
     ]
@@ -225,6 +229,56 @@ async def test_list_documents_and_chunks_are_scoped() -> None:
     with pytest.raises(HTTPException) as error:
         await documents.document_chunks(document_id, 100, 0, who, FakeSession([None]))
     assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_document_creates_next_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id, document_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = Document(
+        id=document_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        external_document_id="guide-1",
+        current_version=2,
+        lock_version=3,
+        metadata_={"topic": "operations"},
+    )
+    current = version(tenant_id, project_id)
+    current.document_id = document_id
+    current.version = 2
+    current.document_type = "text"
+    current.title = "Existing title"
+    current.language = "en"
+    captured: list[DocumentCreate] = []
+
+    async def ingest(session: object, who: Principal, data: DocumentCreate) -> DocumentVersion:
+        captured.append(data)
+        created = version(tenant_id, project_id)
+        created.document_id = document_id
+        created.version = data.version
+        return created
+
+    monkeypatch.setattr(documents, "ingest", ingest)
+    result = await documents.update_document(
+        document_id,
+        DocumentUpdate(expected_lock_version=3, content="Updated content"),
+        scoped_principal(tenant_id, project_id, "documents:write"),
+        FakeSession([row, current]),
+    )
+    assert result.version == 3
+    assert captured[0].title == "Existing title"
+    assert captured[0].metadata == {"topic": "operations"}
+
+    row.lock_version = 4
+    with pytest.raises(HTTPException) as error:
+        await documents.update_document(
+            document_id,
+            DocumentUpdate(expected_lock_version=3, content="Stale update"),
+            scoped_principal(tenant_id, project_id, "documents:write"),
+            FakeSession([row]),
+        )
+    assert error.value.status_code == 409
 
 
 @pytest.mark.asyncio
