@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_platform.api.schemas import (
     ApiKeyCreate,
     CollectionCreate,
+    CollectionUpdate,
     ProjectCreate,
+    ProjectUpdate,
     SearchRequest,
     TenantCreate,
 )
@@ -76,6 +78,39 @@ async def projects(
     ]
 
 
+@router.get("/projects/{project_id}")
+async def project(
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(Project, project_id)
+    if row is None:
+        raise HTTPException(404, "project not found")
+    return {
+        "id": row.id,
+        "tenant_id": row.tenant_id,
+        "slug": row.slug,
+        "name": row.name,
+        "description": row.description,
+        "enabled": row.enabled,
+    }
+
+
+@router.patch("/projects/{project_id}")
+async def update_project(
+    project_id: uuid.UUID,
+    data: ProjectUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(Project, project_id)
+    if row is None:
+        raise HTTPException(404, "project not found")
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(row, field, value)
+    await session.commit()
+    return await project(project_id, session)
+
+
 @router.post("/projects/{project_id}/reconcile", status_code=202)
 async def reconcile_project(
     project_id: uuid.UUID,
@@ -136,6 +171,39 @@ async def collections(
         }
         for row in rows
     ]
+
+
+@router.get("/collections/{collection_id}")
+async def collection(
+    collection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(Collection, collection_id)
+    if row is None:
+        raise HTTPException(404, "collection not found")
+    return {
+        "id": row.id,
+        "tenant_id": row.tenant_id,
+        "project_id": row.project_id,
+        "name": row.name,
+        "description": row.description,
+        "settings": row.settings,
+    }
+
+
+@router.patch("/collections/{collection_id}")
+async def update_collection(
+    collection_id: uuid.UUID,
+    data: CollectionUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(Collection, collection_id)
+    if row is None:
+        raise HTTPException(404, "collection not found")
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(row, field, value)
+    await session.commit()
+    return await collection(collection_id, session)
 
 
 @router.get("/indexing/jobs")

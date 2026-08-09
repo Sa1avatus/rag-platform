@@ -78,6 +78,12 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
+class ProjectUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    enabled: bool | None = None
+
+
 class TenantCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
 
@@ -95,6 +101,12 @@ class CollectionCreate(BaseModel):
     name: str
     description: str = ""
     settings: dict[str, Any] = Field(default_factory=dict)
+
+
+class CollectionUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = None
+    settings: dict[str, Any] | None = None
 
 
 class ContextResponse(BaseModel):

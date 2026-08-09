@@ -8,7 +8,9 @@ from rag_platform.api.routes import admin
 from rag_platform.api.schemas import (
     ApiKeyCreate,
     CollectionCreate,
+    CollectionUpdate,
     ProjectCreate,
+    ProjectUpdate,
     SearchRequest,
     TenantCreate,
 )
@@ -68,6 +70,33 @@ async def test_create_and_list_projects() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_and_update_project() -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    row = Project(
+        id=project_id,
+        tenant_id=tenant_id,
+        slug="docs",
+        name="Docs",
+        description="Old",
+        enabled=True,
+    )
+    session = FakeSession(scalar_values=[row, row])
+    updated = await admin.update_project(
+        project_id,
+        ProjectUpdate(name="Knowledge", description="New", enabled=False),
+        session,
+    )
+    assert updated["name"] == "Knowledge"
+    assert updated["enabled"] is False
+    assert updated["tenant_id"] == tenant_id
+    assert session.commits == 1
+
+    with pytest.raises(HTTPException) as error:
+        await admin.project(project_id, FakeSession(scalar_values=[None]))
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_create_tenant() -> None:
     session = FakeSession()
     created = await admin.create_tenant(TenantCreate(name="E2E Tenant"), session)
@@ -100,6 +129,32 @@ async def test_create_collection_and_api_key(monkeypatch: pytest.MonkeyPatch) ->
     )
     assert key["api_key"] == "rag_stable-secret"
     assert key_session.added[0].key_hash == "hashed"  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_get_and_update_collection() -> None:
+    tenant_id, project_id, collection_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = admin.Collection(
+        id=collection_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        name="manuals",
+        description="Old",
+        settings={"vector_top_k": 20},
+    )
+    session = FakeSession(scalar_values=[row, row])
+    updated = await admin.update_collection(
+        collection_id,
+        CollectionUpdate(description="New", settings={"vector_top_k": 30}),
+        session,
+    )
+    assert updated["description"] == "New"
+    assert updated["settings"] == {"vector_top_k": 30}
+    assert updated["project_id"] == project_id
+
+    with pytest.raises(HTTPException) as error:
+        await admin.collection(collection_id, FakeSession(scalar_values=[None]))
+    assert error.value.status_code == 404
 
 
 @pytest.mark.asyncio
