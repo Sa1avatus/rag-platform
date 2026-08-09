@@ -24,6 +24,10 @@ class DocumentRead(BaseModel):
     content_hash: str
 
 
+class DocumentBatchCreate(BaseModel):
+    documents: list[DocumentCreate] = Field(min_length=1, max_length=100)
+
+
 class UploadRead(BaseModel):
     documents: list[DocumentRead]
     source_object_key: str

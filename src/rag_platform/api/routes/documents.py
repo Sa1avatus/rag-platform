@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_platform.api.schemas import DocumentCreate, DocumentRead, UploadRead
+from rag_platform.api.schemas import DocumentBatchCreate, DocumentCreate, DocumentRead, UploadRead
 from rag_platform.core.auth import Principal, principal
 from rag_platform.core.config import get_settings
 from rag_platform.db.models import Chunk, Document, DocumentBlob, DocumentVersion, Status
@@ -118,6 +118,21 @@ async def create(
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
     return _document_read(version)
+
+
+@router.post("/batch", response_model=list[DocumentRead], status_code=202)
+async def create_batch(
+    data: DocumentBatchCreate,
+    who: Principal = Depends(principal),
+    session: AsyncSession = Depends(get_session),
+) -> list[DocumentRead]:
+    created: list[DocumentRead] = []
+    try:
+        for document in data.documents:
+            created.append(_document_read(await ingest(session, who, document)))
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return created
 
 
 @router.get("")

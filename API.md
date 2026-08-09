@@ -26,3 +26,7 @@ the current indexed derivatives without exposing records outside the API key sco
 
 Document ingestion accepts only collections registered for the same tenant and project through the
 administrative API. An authorized key alone cannot create an implicit collection.
+
+`POST /v1/documents/batch` accepts `{"documents": [...]}` with 1 to 100 document payloads and
+returns accepted versions in input order. The operation is intentionally non-atomic: processing
+stops on the first `409`, while documents accepted before that failure remain committed and queued.

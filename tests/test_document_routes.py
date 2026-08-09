@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException, UploadFile
 
 from rag_platform.api.routes import documents
-from rag_platform.api.schemas import DocumentCreate
+from rag_platform.api.schemas import DocumentBatchCreate, DocumentCreate
 from rag_platform.core.auth import Principal
 from rag_platform.db.models import Chunk, Document, DocumentVersion, IndexingJob, Status
 from rag_platform.services.extraction import ExtractedDocument
@@ -94,6 +94,45 @@ async def test_create_document_maps_conflict(monkeypatch: pytest.MonkeyPatch) ->
     with pytest.raises(HTTPException) as error:
         await documents.create(
             data,
+            scoped_principal(tenant_id, project_id, "documents:write"),
+            FakeSession(),
+        )
+    assert error.value.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_create_document_batch_preserves_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    payloads = [
+        DocumentCreate(
+            project_id=project_id,
+            collection="manuals",
+            external_document_id=f"guide-{index}",
+            content=f"content {index}",
+        )
+        for index in range(2)
+    ]
+
+    async def ingest(session: object, who: Principal, data: DocumentCreate) -> DocumentVersion:
+        row = version(tenant_id, project_id)
+        row.external_document_id = data.external_document_id
+        return row
+
+    monkeypatch.setattr(documents, "ingest", ingest)
+    result = await documents.create_batch(
+        DocumentBatchCreate(documents=payloads),
+        scoped_principal(tenant_id, project_id, "documents:write"),
+        FakeSession(),
+    )
+    assert [item.external_document_id for item in result] == ["guide-0", "guide-1"]
+
+    async def conflict(*args: object) -> DocumentVersion:
+        raise ValueError("collection not found")
+
+    monkeypatch.setattr(documents, "ingest", conflict)
+    with pytest.raises(HTTPException) as error:
+        await documents.create_batch(
+            DocumentBatchCreate(documents=payloads),
             scoped_principal(tenant_id, project_id, "documents:write"),
             FakeSession(),
         )
