@@ -20,7 +20,7 @@ from rag_platform.api.schemas import (
     TenantCreate,
 )
 from rag_platform.core.auth import Principal
-from rag_platform.db.models import AuditLog, IndexingJob, Project, RetrievalRequest
+from rag_platform.db.models import AuditLog, Chunk, Document, IndexingJob, Project, RetrievalRequest
 
 
 class ScalarRows:
@@ -78,6 +78,63 @@ async def test_create_and_list_projects() -> None:
     listed = await admin.projects(FakeSession(rows=[row]))
     assert listed[0]["tenant_id"] == tenant_id
     assert listed[0]["enabled"] is None or listed[0]["enabled"] is True
+
+
+@pytest.mark.asyncio
+async def test_admin_documents_and_chunks_are_explicitly_scoped() -> None:
+    tenant_id, project_id, document_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    document = Document(
+        id=document_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        external_document_id="guide",
+        current_version=2,
+        lock_version=2,
+        metadata_={"source": "test"},
+    )
+    listed = await admin.admin_documents(
+        tenant_id, project_id, "manuals", 100, 0, FakeSession(rows=[document])
+    )
+    assert listed[0]["tenant_id"] == tenant_id
+    assert listed[0]["collection"] == "manuals"
+
+    chunk = Chunk(
+        id=uuid.uuid4(),
+        document_id=document_id,
+        document_version_id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        chunk_index=0,
+        chunk_type="child",
+        content="Safe content",
+        token_count=2,
+        language="en",
+        content_hash="hash",
+        metadata_={},
+        embedding_model="model",
+        embedding_dimension=3,
+    )
+    chunks = await admin.admin_document_chunks(
+        document_id,
+        tenant_id,
+        project_id,
+        "manuals",
+        100,
+        0,
+        FakeSession(scalar_values=[document], rows=[chunk]),
+    )
+    assert chunks == [
+        {
+            "id": chunk.id,
+            "chunk_index": 0,
+            "chunk_type": "child",
+            "content": "Safe content",
+            "token_count": 2,
+            "language": "en",
+        }
+    ]
 
 
 @pytest.mark.asyncio

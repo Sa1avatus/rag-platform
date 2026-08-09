@@ -127,6 +127,94 @@ async def projects(
     ]
 
 
+@router.get("/documents")
+async def admin_documents(
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    collection: str | None = None,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    filters = [
+        Document.tenant_id == tenant_id,
+        Document.project_id == project_id,
+        Document.deleted_at.is_(None),
+    ]
+    if collection:
+        filters.append(Document.collection == collection)
+    rows = (
+        await session.scalars(
+            select(Document)
+            .where(*filters)
+            .order_by(Document.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+    return [
+        {
+            "id": row.id,
+            "tenant_id": row.tenant_id,
+            "project_id": row.project_id,
+            "collection": row.collection,
+            "external_document_id": row.external_document_id,
+            "current_version": row.current_version,
+            "lock_version": row.lock_version,
+            "metadata": row.metadata_,
+        }
+        for row in rows
+    ]
+
+
+@router.get("/documents/{document_id}/chunks")
+async def admin_document_chunks(
+    document_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    collection: str,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    document = await session.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.tenant_id == tenant_id,
+            Document.project_id == project_id,
+            Document.collection == collection,
+            Document.deleted_at.is_(None),
+        )
+    )
+    if document is None:
+        raise HTTPException(404, "document not found")
+    rows = (
+        await session.scalars(
+            select(Chunk)
+            .where(
+                Chunk.document_id == document_id,
+                Chunk.tenant_id == tenant_id,
+                Chunk.project_id == project_id,
+                Chunk.collection == collection,
+            )
+            .order_by(Chunk.chunk_index)
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+    return [
+        {
+            "id": row.id,
+            "chunk_index": row.chunk_index,
+            "chunk_type": row.chunk_type,
+            "content": row.content,
+            "token_count": row.token_count,
+            "language": row.language,
+        }
+        for row in rows
+    ]
+
+
 @router.get("/projects/{project_id}")
 async def project(
     project_id: uuid.UUID,

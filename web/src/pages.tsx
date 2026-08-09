@@ -6,6 +6,78 @@ const Loading=()=> <div className="skeleton">Loading…</div>;
 export function Dashboard(){const q=useQuery({queryKey:["dashboard"],queryFn:()=>api<Record<string,number>>("/v1/admin/dashboard")});if(q.isLoading)return <Loading/>;if(q.error)return <p role="alert">{q.error.message}</p>;return <><header><h1>Dashboard</h1><select aria-label="Period"><option>Last 24 hours</option><option>7 days</option><option>30 days</option></select></header><section className="cards">{Object.entries(q.data??{}).map(([k,v])=><article key={k}><span>{k}</span><strong>{v.toLocaleString()}</strong></article>)}</section></>}
 export function Projects(){const client=useQueryClient();const q=useQuery({queryKey:["projects"],queryFn:()=>api<any[]>("/v1/admin/projects")});async function create(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await api("/v1/admin/projects",{method:"POST",body:JSON.stringify(Object.fromEntries(f))});client.invalidateQueries({queryKey:["projects"]});e.currentTarget.reset()}return <><h1>Projects</h1><form className="inline" onSubmit={create}><input name="tenant_id" placeholder="Tenant UUID" required/><input name="slug" placeholder="project-slug" required/><input name="name" placeholder="Project name" required/><button>Create</button></form>{q.isLoading?<Loading/>:<table><thead><tr><th>Name</th><th>Slug</th><th>Status</th></tr></thead><tbody>{q.data?.map(p=><tr key={p.id}><td>{p.name}</td><td>{p.slug}</td><td>{p.enabled?"Enabled":"Disabled"}</td></tr>)}</tbody></table>}</>}
 export function Collections(){const q=useQuery({queryKey:["collections"],queryFn:()=>api<any[]>("/v1/admin/collections")});return <><h1>Collections</h1>{q.isLoading?<Loading/>:<table><thead><tr><th>Name</th><th>Project</th><th>Strategy</th></tr></thead><tbody>{q.data?.map(c=><tr key={c.id}><td>{c.name}</td><td>{c.project_id}</td><td>{c.settings.chunking_strategy??"recursive_text"}</td></tr>)}</tbody></table>}</>}
+
+type DocumentItem = {
+  id: string;
+  tenant_id: string;
+  project_id: string;
+  collection: string;
+  external_document_id: string;
+  current_version: number;
+  lock_version: number;
+  metadata: Record<string, unknown>;
+};
+type DocumentChunk = {id:string; chunk_index:number; chunk_type:string; content:string; token_count:number; language:string};
+type ProjectOption = {id:string; tenant_id:string; name:string};
+type CollectionOption = {id:string; project_id:string; name:string};
+
+export function documentQuery(tenantId:string, projectId:string, collection:string) {
+  const query = new URLSearchParams({tenant_id:tenantId, project_id:projectId, limit:"100"});
+  if (collection) query.set("collection", collection);
+  return query.toString();
+}
+
+export function Documents() {
+  const [params, setParams] = useSearchParams();
+  const projectId = params.get("project_id") ?? "";
+  const collection = params.get("collection") ?? "";
+  const documentId = params.get("document") ?? "";
+  const projects = useQuery({queryKey:["projects"],queryFn:()=>api<ProjectOption[]>("/v1/admin/projects")});
+  const collections = useQuery({queryKey:["collections"],queryFn:()=>api<CollectionOption[]>("/v1/admin/collections")});
+  const selectedProject = projects.data?.find(item=>item.id===projectId);
+  const documents = useQuery({
+    queryKey:["documents",selectedProject?.tenant_id,projectId,collection],
+    queryFn:()=>api<DocumentItem[]>(`/v1/admin/documents?${documentQuery(selectedProject?.tenant_id ?? "",projectId,collection)}`),
+    enabled:Boolean(projectId && selectedProject),
+  });
+  const selectedDocument = documents.data?.find(item=>item.id===documentId);
+  const chunks = useQuery({
+    queryKey:["document-chunks",documentId],
+    queryFn:()=>api<DocumentChunk[]>(`/v1/admin/documents/${documentId}/chunks?${new URLSearchParams({tenant_id:selectedDocument?.tenant_id ?? "",project_id:selectedDocument?.project_id ?? "",collection:selectedDocument?.collection ?? "",limit:"100"})}`),
+    enabled:Boolean(documentId && selectedDocument),
+  });
+
+  function filter(event:FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next = new URLSearchParams({project_id:String(form.get("project_id") ?? "")});
+    const selectedCollection = String(form.get("collection") ?? "");
+    if (selectedCollection) next.set("collection",selectedCollection);
+    setParams(next);
+  }
+  const availableCollections = collections.data?.filter(item=>item.project_id===projectId) ?? [];
+
+  return <>
+    <header><div><h1>Documents</h1><p className="lede">Tenant-scoped document inventory and indexed chunk inspection.</p></div></header>
+    <form className="document-filter" onSubmit={filter}>
+      <label>Project<select name="project_id" value={projectId} required onChange={event=>setParams(event.target.value?{project_id:event.target.value}:{})}><option value="">Select a project</option>{projects.data?.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label>Collection<select name="collection" defaultValue={collection}><option value="">All authorized collections</option>{availableCollections.map(item=><option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
+      <button>Load documents</button>
+    </form>
+    {!projectId && <div className="empty">Select a project to load its authorized documents.</div>}
+    {documents.isLoading && <Loading/>}{documents.error && <p role="alert">{documents.error.message}</p>}
+    {projectId && documents.data?.length===0 && <div className="empty">No documents match this scope.</div>}
+    {!!documents.data?.length && <div className="split-view"><table><thead><tr><th>External ID</th><th>Collection</th><th>Version</th><th>Metadata</th><th>Actions</th></tr></thead><tbody>{documents.data.map(item=><tr key={item.id} className={item.id===documentId?"selected-row":undefined}>
+      <td>{item.external_document_id}<small className="resource-id">{item.id}</small></td><td>{item.collection}</td><td>{item.current_version}</td><td>{Object.keys(item.metadata).length} fields</td>
+      <td><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("document",item.id);setParams(next)}}>Chunks</button></td>
+    </tr>)}</tbody></table>
+      {documentId && <aside className="detail-panel"><div className="setting-heading"><h2>Document chunks</h2><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.delete("document");setParams(next)}}>Close</button></div>
+        {chunks.isLoading&&<Loading/>}{chunks.error&&<p role="alert">{chunks.error.message}</p>}{chunks.data?.length===0&&<div className="empty">No chunks available.</div>}
+        {chunks.data?.map(chunk=><article className="chunk-card" key={chunk.id}><div><span>Chunk {chunk.chunk_index}</span><small>{chunk.chunk_type} · {chunk.token_count} tokens · {chunk.language}</small></div><p>{chunk.content}</p></article>)}
+      </aside>}
+    </div>}
+  </>;
+}
 export function SearchPlayground(){const [result,setResult]=useState<any>();async function run(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setResult(await api("/v1/admin/retrieval/search",{method:"POST",body:JSON.stringify({project_id:f.get("project_id"),collections:String(f.get("collections")).split(","),query:f.get("query"),include_trace:true})}))}return <><h1>Search Playground</h1><form onSubmit={run}><input name="project_id" placeholder="Project UUID" required/><input name="collections" placeholder="Collection names" required/><textarea name="query" placeholder="Ask a retrieval question" required/><button>Search</button></form>{result&&<pre>{JSON.stringify(result,null,2)}</pre>}</>}
 export function SystemHealth(){const q=useQuery({queryKey:["health"],queryFn:()=>api<any>("/v1/admin/system/health"),refetchInterval:10000});return <><h1>System Health</h1>{q.isLoading?<Loading/>:<section className="cards">{q.data?.components.map((c:any)=><article key={c.name}><span>{c.name}</span><strong className="healthy">{c.status}</strong></article>)}</section>}</>}
 
