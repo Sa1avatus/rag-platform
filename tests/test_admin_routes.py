@@ -158,6 +158,44 @@ async def test_get_and_update_collection() -> None:
 
 
 @pytest.mark.asyncio
+async def test_reindex_collection(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id, collection_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = admin.Collection(
+        id=collection_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        name="manuals",
+    )
+
+    async def reindex(
+        session: object,
+        scoped_tenant_id: uuid.UUID,
+        scoped_project_id: uuid.UUID,
+        name: str,
+    ) -> dict[str, int]:
+        assert (scoped_tenant_id, scoped_project_id, name) == (
+            tenant_id,
+            project_id,
+            "manuals",
+        )
+        return {"requeued": 2, "skipped_active": 1}
+
+    monkeypatch.setattr(admin, "reindex_collection", reindex)
+    result = await admin.reindex_admin_collection(
+        collection_id,
+        FakeSession(scalar_values=[row]),
+    )
+    assert result == {"requeued": 2, "skipped_active": 1}
+
+    with pytest.raises(HTTPException) as error:
+        await admin.reindex_admin_collection(
+            collection_id,
+            FakeSession(scalar_values=[None]),
+        )
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_retry_and_cancel_indexing_jobs() -> None:
     job = IndexingJob(
         id=uuid.uuid4(),

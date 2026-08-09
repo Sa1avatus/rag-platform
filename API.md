@@ -24,6 +24,8 @@ that tenant.
 Projects and collections support detail reads and partial updates at
 `/v1/admin/projects/{project_id}` and `/v1/admin/collections/{collection_id}`. Their tenant and
 project ownership fields are immutable through these endpoints.
+`POST /v1/admin/collections/{collection_id}/reindex` requeues every current, non-deleted version in
+that collection while skipping versions that already have active indexing jobs.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns

@@ -27,7 +27,7 @@ from rag_platform.db.models import (
 )
 from rag_platform.db.session import get_session
 from rag_platform.services.health import system_health
-from rag_platform.services.reconciliation import reconcile
+from rag_platform.services.reconciliation import reconcile, reindex_collection
 from rag_platform.services.retrieval import search
 
 router = APIRouter(
@@ -204,6 +204,17 @@ async def update_collection(
         setattr(row, field, value)
     await session.commit()
     return await collection(collection_id, session)
+
+
+@router.post("/collections/{collection_id}/reindex", status_code=202)
+async def reindex_admin_collection(
+    collection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, int]:
+    row = await session.get(Collection, collection_id)
+    if row is None:
+        raise HTTPException(404, "collection not found")
+    return await reindex_collection(session, row.tenant_id, row.project_id, row.name)
 
 
 @router.get("/indexing/jobs")

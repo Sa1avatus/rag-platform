@@ -57,3 +57,41 @@ async def test_reconcile_requeues_only_inactive_targets(monkeypatch: pytest.Monk
     assert calls == [("index", pending_version_id), ("delete", deleted_document_id)]
     assert versions[1].status == Status.queued
     assert session.committed is True
+
+
+@pytest.mark.asyncio
+async def test_collection_reindex_skips_active_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    active = DocumentVersion(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        status=Status.processing,
+    )
+    inactive = DocumentVersion(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        status=Status.indexed,
+    )
+    jobs = [IndexingJob(payload={"status": "running", "version_id": str(active.id)})]
+    calls: list[uuid.UUID] = []
+
+    async def enqueue(session: object, value: DocumentVersion) -> Any:
+        calls.append(value.id)
+
+    monkeypatch.setattr(reconciliation, "enqueue_indexing", enqueue)
+    session = FakeSession([jobs, [active, inactive]])
+    result = await reconciliation.reindex_collection(
+        session,
+        tenant_id,
+        project_id,
+        "manuals",
+    )
+
+    assert result == {"requeued": 1, "skipped_active": 1}
+    assert calls == [inactive.id]
+    assert inactive.status == Status.queued
+    assert session.committed is True

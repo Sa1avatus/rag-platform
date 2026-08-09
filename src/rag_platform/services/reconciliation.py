@@ -58,3 +58,42 @@ async def reconcile(
         "indexing_requeued": requeued,
         "deletion_requeued": deletion_requeued,
     }
+
+
+async def reindex_collection(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    collection: str,
+) -> dict[str, int]:
+    jobs = (
+        await session.scalars(
+            select(IndexingJob).where(
+                IndexingJob.tenant_id == tenant_id,
+                IndexingJob.project_id == project_id,
+            )
+        )
+    ).all()
+    active_version_ids, _ = active_targets([job.payload for job in jobs])
+    versions = (
+        await session.scalars(
+            select(DocumentVersion).where(
+                DocumentVersion.tenant_id == tenant_id,
+                DocumentVersion.project_id == project_id,
+                DocumentVersion.collection == collection,
+                DocumentVersion.is_current.is_(True),
+                DocumentVersion.status != Status.deleted,
+            )
+        )
+    ).all()
+    requeued = 0
+    skipped_active = 0
+    for version in versions:
+        if version.id in active_version_ids:
+            skipped_active += 1
+            continue
+        version.status = Status.queued
+        await enqueue_indexing(session, version)
+        requeued += 1
+    await session.commit()
+    return {"requeued": requeued, "skipped_active": skipped_active}
