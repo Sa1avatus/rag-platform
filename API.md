@@ -19,3 +19,7 @@ jobs through `POST /v1/admin/indexing/jobs/{job_id}/retry`, and cancel jobs that
 through `POST /v1/admin/indexing/jobs/{job_id}/cancel`. Running jobs cannot be canceled by this API.
 Create a tenant with `POST /v1/admin/tenants` before registering projects or service API keys for
 that tenant.
+
+Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
+restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns
+the current indexed derivatives without exposing records outside the API key scope.

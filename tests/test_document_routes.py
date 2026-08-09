@@ -8,18 +8,33 @@ from fastapi import HTTPException, UploadFile
 from rag_platform.api.routes import documents
 from rag_platform.api.schemas import DocumentCreate
 from rag_platform.core.auth import Principal
-from rag_platform.db.models import Document, DocumentVersion, IndexingJob, Status
+from rag_platform.db.models import Chunk, Document, DocumentVersion, IndexingJob, Status
 from rag_platform.services.extraction import ExtractedDocument
 
 
 class FakeSession:
-    def __init__(self, values: list[Any] | None = None) -> None:
+    def __init__(
+        self,
+        values: list[Any] | None = None,
+        rows: list[object] | None = None,
+    ) -> None:
         self.values = list(values or [])
+        self.rows = rows or []
         self.added: list[object] = []
         self.commits = 0
 
     async def scalar(self, statement: object) -> Any:
         return self.values.pop(0)
+
+    async def scalars(self, statement: object) -> Any:
+        class Rows:
+            def __init__(self, values: list[object]) -> None:
+                self.values = values
+
+            def all(self) -> list[object]:
+                return self.values
+
+        return Rows(self.rows)
 
     def add(self, value: object) -> None:
         self.added.append(value)
@@ -111,6 +126,65 @@ async def test_get_and_delete_document(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(HTTPException) as error:
         await documents.get(document_id, who, FakeSession([None]))
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_documents_and_chunks_are_scoped() -> None:
+    tenant_id, project_id, document_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = Document(
+        id=document_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        external_document_id="guide-1",
+        current_version=1,
+        metadata_={"topic": "operations"},
+    )
+    who = scoped_principal(tenant_id, project_id, "documents:read")
+    listed = await documents.list_documents(
+        project_id, "manuals", 50, 0, who, FakeSession(rows=[row])
+    )
+    assert listed == [
+        {
+            "id": document_id,
+            "project_id": project_id,
+            "collection": "manuals",
+            "external_document_id": "guide-1",
+            "current_version": 1,
+            "metadata": {"topic": "operations"},
+        }
+    ]
+
+    chunk = Chunk(
+        id=uuid.uuid4(),
+        document_id=document_id,
+        document_version_id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        chunk_index=0,
+        chunk_type="child",
+        content="Operations guide",
+        token_count=2,
+        language="en",
+        content_hash="b" * 64,
+        metadata_={"topic": "operations"},
+        embedding_model="BAAI/bge-m3",
+        embedding_dimension=1024,
+    )
+    chunks = await documents.document_chunks(
+        document_id,
+        100,
+        0,
+        who,
+        FakeSession([row], rows=[chunk]),
+    )
+    assert chunks[0]["content"] == "Operations guide"
+    assert chunks[0]["embedding_dimension"] == 1024
+
+    with pytest.raises(HTTPException) as error:
+        await documents.document_chunks(document_id, 100, 0, who, FakeSession([None]))
     assert error.value.status_code == 404
 
 

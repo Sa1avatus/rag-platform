@@ -4,14 +4,14 @@ from contextlib import suppress
 from pathlib import PurePath
 from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.api.schemas import DocumentCreate, DocumentRead, UploadRead
 from rag_platform.core.auth import Principal, principal
 from rag_platform.core.config import get_settings
-from rag_platform.db.models import Document, DocumentBlob, DocumentVersion, Status
+from rag_platform.db.models import Chunk, Document, DocumentBlob, DocumentVersion, Status
 from rag_platform.db.session import get_session
 from rag_platform.services.blobs import object_key, put, remove
 from rag_platform.services.documents import enqueue_deletion, enqueue_indexing, ingest
@@ -120,6 +120,43 @@ async def create(
     return _document_read(version)
 
 
+@router.get("")
+async def list_documents(
+    project_id: uuid.UUID,
+    collection: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    who: Principal = Depends(principal),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    collections = [collection] if collection else sorted(who.collections)
+    who.authorize(project_id, collections, "documents:read")
+    statement = (
+        select(Document)
+        .where(
+            Document.tenant_id == who.tenant_id,
+            Document.project_id == project_id,
+            Document.collection.in_(collections),
+            Document.deleted_at.is_(None),
+        )
+        .order_by(Document.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = (await session.scalars(statement)).all()
+    return [
+        {
+            "id": row.id,
+            "project_id": row.project_id,
+            "collection": row.collection,
+            "external_document_id": row.external_document_id,
+            "current_version": row.current_version,
+            "metadata": row.metadata_,
+        }
+        for row in rows
+    ]
+
+
 @router.get("/{document_id}")
 async def get(
     document_id: uuid.UUID,
@@ -142,6 +179,57 @@ async def get(
         "external_document_id": row.external_document_id,
         "current_version": row.current_version,
     }
+
+
+@router.get("/{document_id}/chunks")
+async def document_chunks(
+    document_id: uuid.UUID,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    who: Principal = Depends(principal),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    document = await session.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.tenant_id == who.tenant_id,
+            Document.project_id.in_(who.project_ids),
+            Document.deleted_at.is_(None),
+        )
+    )
+    if document is None:
+        raise HTTPException(404, "document not found")
+    who.authorize(document.project_id, [document.collection], "documents:read")
+    rows = (
+        await session.scalars(
+            select(Chunk)
+            .where(
+                Chunk.document_id == document.id,
+                Chunk.tenant_id == who.tenant_id,
+                Chunk.project_id == document.project_id,
+                Chunk.collection == document.collection,
+            )
+            .order_by(Chunk.chunk_index)
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+    return [
+        {
+            "id": row.id,
+            "parent_chunk_id": row.parent_chunk_id,
+            "chunk_index": row.chunk_index,
+            "chunk_type": row.chunk_type,
+            "content": row.content,
+            "token_count": row.token_count,
+            "language": row.language,
+            "content_hash": row.content_hash,
+            "metadata": row.metadata_,
+            "embedding_model": row.embedding_model,
+            "embedding_dimension": row.embedding_dimension,
+        }
+        for row in rows
+    ]
 
 
 @router.delete("/{document_id}", status_code=204)
