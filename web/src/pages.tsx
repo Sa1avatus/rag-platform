@@ -250,4 +250,52 @@ export function RetrievalTraces() {
     </div>}
   </>;
 }
+
+type EmbeddingProfile = {
+  status: string;
+  model: string;
+  device: string | null;
+  dimension: number | null;
+  expected_dimension: number;
+  compatible: boolean;
+};
+
+export const embeddingCompatibility = (profile: EmbeddingProfile) =>
+  profile.compatible ? "Compatible" : "Incompatible";
+
+export function Models() {
+  const query = useQuery({
+    queryKey: ["embedding-profile"],
+    queryFn: () => api<EmbeddingProfile>("/v1/admin/models/embeddings"),
+    refetchInterval: 10000,
+  });
+  const check = useMutation({mutationFn: () => api<EmbeddingProfile>("/v1/admin/models/embeddings/check", {method:"POST"})});
+  const reindex = useMutation({mutationFn: () => api<Record<string,number>>("/v1/admin/models/embeddings/reindex", {method:"POST",body:JSON.stringify({confirm:true})})});
+  const profile = check.data ?? query.data;
+
+  async function startReindex() {
+    if (!profile?.compatible) return;
+    if (!window.confirm(`Reindex every current document with ${profile.model}?`)) return;
+    await reindex.mutateAsync();
+  }
+
+  return <>
+    <header><div><h1>Models</h1><p className="lede">Embedding worker compatibility and guarded reindexing.</p></div>
+      <button className="quiet" disabled={check.isPending} onClick={() => check.mutate()}>Check compatibility</button>
+    </header>
+    {query.isLoading && <Loading/>}{query.error && <p role="alert">{query.error.message}</p>}
+    {(check.error || reindex.error) && <p role="alert">{(check.error ?? reindex.error)?.message}</p>}
+    {profile && <><section className="cards model-cards">
+      <article><span>Status</span><strong className={profile.status==="ready"?"healthy":""}>{profile.status}</strong></article>
+      <article><span>Compatibility</span><strong className={profile.compatible?"healthy":"unhealthy"}>{embeddingCompatibility(profile)}</strong></article>
+      <article><span>Device</span><strong>{profile.device ?? "Unknown"}</strong></article>
+      <article><span>Dimension</span><strong>{profile.dimension ?? "—"} / {profile.expected_dimension}</strong></article>
+    </section>
+    <article className="model-profile"><div><span>Active embedding model</span><h2>{profile.model}</h2></div>
+      <p>Reindexing preserves active jobs and requires a compatible worker heartbeat.</p>
+      <button className="danger" disabled={!profile.compatible || reindex.isPending} onClick={startReindex}>Reindex all embeddings</button>
+      {reindex.data && <p role="status">Requeued {reindex.data.requeued}; skipped active {reindex.data.skipped_active}.</p>}
+    </article></>}
+  </>;
+}
 export function Placeholder({title}:{title:string}){return <><h1>{title}</h1><div className="empty">No records match the current filters.</div></>}

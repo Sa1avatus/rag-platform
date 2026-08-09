@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {auditQuery, canCancelJob, canRetryJob, settingValue, traceStatus} from "./pages";
+import {auditQuery, canCancelJob, canRetryJob, embeddingCompatibility, settingValue, traceStatus} from "./pages";
 
 describe("settingValue", () => {
   it("parses boolean controls", () => {
@@ -33,5 +33,13 @@ describe("traceStatus", () => {
     const base = {id:"1",project_id:"2",created_at:"",query:"q",collections:[],configuration:{},results:[]};
     expect(traceStatus({...base,trace:{reranker_degraded:true}})).toBe("Degraded");
     expect(traceStatus({...base,trace:{opensearch_degraded:false}})).toBe("Healthy");
+  });
+});
+
+describe("embeddingCompatibility", () => {
+  it("labels the verified model profile", () => {
+    const profile = {status:"ready",model:"BAAI/bge-m3",device:"cpu",dimension:1024,expected_dimension:1024,compatible:true};
+    expect(embeddingCompatibility(profile)).toBe("Compatible");
+    expect(embeddingCompatibility({...profile,compatible:false})).toBe("Incompatible");
   });
 });
