@@ -199,4 +199,55 @@ export function Indexing() {
       </tr>)}</tbody></table>}
   </>;
 }
+
+type RetrievalTrace = {
+  id: string;
+  project_id: string;
+  created_at: string;
+  query: string;
+  collections: string[];
+  configuration: Record<string, unknown>;
+  results: Array<Record<string, unknown>>;
+  trace: {latency_ms?: number; reranker_degraded?: boolean; opensearch_degraded?: boolean};
+};
+
+export const traceStatus = (trace: RetrievalTrace) =>
+  trace.trace.reranker_degraded || trace.trace.opensearch_degraded ? "Degraded" : "Healthy";
+
+export function RetrievalTraces() {
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get("trace");
+  const query = useQuery({
+    queryKey: ["retrieval-traces"],
+    queryFn: () => api<RetrievalTrace[]>("/v1/admin/retrieval/traces?limit=100"),
+  });
+  const mutation = useMutation({
+    mutationFn: (id:string) => api(`/v1/admin/retrieval/traces/${id}/repeat`, {method:"POST"}),
+  });
+  const selected = query.data?.find(trace => trace.id === selectedId);
+
+  async function repeat(trace: RetrievalTrace) {
+    if (!window.confirm(`Repeat retrieval query "${trace.query}"?`)) return;
+    await mutation.mutateAsync(trace.id);
+  }
+
+  return <>
+    <header><div><h1>Retrieval Traces</h1><p className="lede">Inspect stored retrieval decisions and degraded fallbacks.</p></div></header>
+    {query.isLoading && <Loading/>}{query.error && <p role="alert">{query.error.message}</p>}
+    {mutation.error && <p role="alert">{mutation.error.message}</p>}
+    {query.data?.length === 0 && <div className="empty">No retrieval traces have been recorded.</div>}
+    {!!query.data?.length && <div className="split-view"><table><thead><tr><th>Time</th><th>Query</th><th>Collections</th><th>Latency</th><th>Status</th><th></th></tr></thead>
+      <tbody>{query.data.map(trace => <tr key={trace.id} className={trace.id===selectedId?"selected-row":undefined}>
+        <td>{new Date(trace.created_at).toLocaleString()}</td><td>{trace.query}</td><td>{trace.collections.join(", ")}</td>
+        <td>{trace.trace.latency_ms ?? "—"} ms</td><td><span className={`badge ${traceStatus(trace)==="Degraded"?"warning":"status-completed"}`}>{traceStatus(trace)}</span></td>
+        <td><button className="quiet" onClick={() => setParams({trace:trace.id})}>Inspect</button></td>
+      </tr>)}</tbody></table>
+      {selected && <aside className="detail-panel"><div className="setting-heading"><h2>Trace detail</h2><button className="quiet" onClick={() => setParams({})}>Close</button></div>
+        <dl><dt>Request ID</dt><dd className="mono">{selected.id}</dd><dt>Project</dt><dd className="mono">{selected.project_id}</dd><dt>Results</dt><dd>{selected.results.length}</dd></dl>
+        <h3>Configuration</h3><pre>{JSON.stringify(selected.configuration,null,2)}</pre><h3>Trace</h3><pre>{JSON.stringify(selected.trace,null,2)}</pre>
+        <button disabled={mutation.isPending} onClick={() => repeat(selected)}>Repeat query</button>
+      </aside>}
+    </div>}
+  </>;
+}
 export function Placeholder({title}:{title:string}){return <><h1>{title}</h1><div className="empty">No records match the current filters.</div></>}

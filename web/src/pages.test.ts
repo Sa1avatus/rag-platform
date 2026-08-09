@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {auditQuery, canCancelJob, canRetryJob, settingValue} from "./pages";
+import {auditQuery, canCancelJob, canRetryJob, settingValue, traceStatus} from "./pages";
 
 describe("settingValue", () => {
   it("parses boolean controls", () => {
@@ -25,5 +25,13 @@ describe("indexing job actions", () => {
     expect(canRetryJob("processing")).toBe(false);
     expect(canCancelJob("queued")).toBe(true);
     expect(canCancelJob("processing")).toBe(false);
+  });
+});
+
+describe("traceStatus", () => {
+  it("surfaces degraded retrieval dependencies", () => {
+    const base = {id:"1",project_id:"2",created_at:"",query:"q",collections:[],configuration:{},results:[]};
+    expect(traceStatus({...base,trace:{reranker_degraded:true}})).toBe("Degraded");
+    expect(traceStatus({...base,trace:{opensearch_degraded:false}})).toBe("Healthy");
   });
 });
