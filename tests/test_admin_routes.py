@@ -132,6 +132,34 @@ async def test_create_collection_and_api_key(monkeypatch: pytest.MonkeyPatch) ->
 
 
 @pytest.mark.asyncio
+async def test_list_and_revoke_api_keys() -> None:
+    tenant_id, project_id, key_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = admin.ApiKey(
+        id=key_id,
+        tenant_id=tenant_id,
+        prefix="rag_visible",
+        key_hash="secret-hash",
+        allowed_project_ids=[project_id],
+        allowed_collections=["manuals"],
+        permissions=["retrieval:search"],
+        revoked=False,
+    )
+    listed = await admin.api_keys(FakeSession(rows=[row]))
+    assert listed[0]["prefix"] == "rag_visible"
+    assert "key_hash" not in listed[0]
+
+    session = FakeSession(scalar_values=[row])
+    await admin.revoke_api_key(key_id, session)
+    assert row.revoked is True
+    assert session.commits == 1
+
+    await admin.revoke_api_key(key_id, FakeSession(scalar_values=[row]))
+    with pytest.raises(HTTPException) as error:
+        await admin.revoke_api_key(key_id, FakeSession(scalar_values=[None]))
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_get_and_update_collection() -> None:
     tenant_id, project_id, collection_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     row = admin.Collection(

@@ -146,6 +146,39 @@ async def create_key(
     }
 
 
+@router.get("/api-keys")
+async def api_keys(
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    rows = (await session.scalars(select(ApiKey).order_by(ApiKey.created_at.desc()))).all()
+    return [
+        {
+            "id": row.id,
+            "tenant_id": row.tenant_id,
+            "prefix": row.prefix,
+            "allowed_project_ids": row.allowed_project_ids,
+            "allowed_collections": row.allowed_collections,
+            "permissions": row.permissions,
+            "revoked": row.revoked,
+            "created_at": row.created_at,
+        }
+        for row in rows
+    ]
+
+
+@router.delete("/api-keys/{key_id}", status_code=204)
+async def revoke_api_key(
+    key_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    row = await session.get(ApiKey, key_id)
+    if row is None:
+        raise HTTPException(404, "API key not found")
+    if not row.revoked:
+        row.revoked = True
+        await session.commit()
+
+
 @router.post("/collections", status_code=201)
 async def create_collection(
     data: CollectionCreate,

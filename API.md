@@ -29,6 +29,8 @@ that collection while skipping versions that already have active indexing jobs.
 Administrative retrieval traces are available through `GET /v1/admin/retrieval/traces` and its
 detail endpoint. `POST /v1/admin/retrieval/traces/{request_id}/repeat` replays the stored query,
 collections, metadata filters, and retrieval configuration into a new trace.
+`GET /v1/admin/api-keys` exposes prefixes and scopes but never raw keys or hashes. Administrators
+can idempotently revoke a key with `DELETE /v1/admin/api-keys/{key_id}`.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns
