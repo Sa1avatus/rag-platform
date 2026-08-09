@@ -8,6 +8,7 @@ from rag_platform.api.schemas import DocumentCreate
 from rag_platform.core.auth import Principal
 from rag_platform.core.metrics import DOCUMENTS_RECEIVED
 from rag_platform.db.models import (
+    Collection,
     Document,
     DocumentVersion,
     IndexingJob,
@@ -18,6 +19,15 @@ from rag_platform.db.models import (
 
 async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) -> DocumentVersion:
     who.authorize(data.project_id, [data.collection], "documents:write")
+    collection = await session.scalar(
+        select(Collection).where(
+            Collection.tenant_id == who.tenant_id,
+            Collection.project_id == data.project_id,
+            Collection.name == data.collection,
+        )
+    )
+    if collection is None:
+        raise ValueError("collection not found")
     digest = hashlib.sha256(data.content.encode()).hexdigest()
     existing = await session.scalar(
         select(DocumentVersion).where(

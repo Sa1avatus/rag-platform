@@ -23,3 +23,6 @@ that tenant.
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns
 the current indexed derivatives without exposing records outside the API key scope.
+
+Document ingestion accepts only collections registered for the same tenant and project through the
+administrative API. An authorized key alone cannot create an implicit collection.
