@@ -43,6 +43,8 @@ container only. It never executes shell commands or exposes host/Docker control 
 `GET /v1/admin/audit-log` lists newest administrative mutations and can filter by action, tenant,
 or project. Audit payloads contain resource identifiers only; service-key secrets and hashes are
 never recorded.
+Project reconciliation, collection reindex, and indexing-job retry/cancel operations are also
+recorded after they succeed.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns

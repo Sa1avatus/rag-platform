@@ -230,15 +230,36 @@ async def test_reindex_collection(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(admin, "reindex_collection", reindex)
     result = await admin.reindex_admin_collection(
         collection_id,
-        FakeSession(scalar_values=[row]),
+        session := FakeSession(scalar_values=[row]),
     )
     assert result == {"requeued": 2, "skipped_active": 1}
+    assert session.added[0].payload["action"] == "collection.reindex"  # type: ignore[attr-defined]
 
     with pytest.raises(HTTPException) as error:
         await admin.reindex_admin_collection(
             collection_id,
             FakeSession(scalar_values=[None]),
         )
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_reconcile_project_is_audited(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    row = Project(id=project_id, tenant_id=tenant_id, slug="docs", name="Docs")
+
+    async def reconcile(session: object, selected_project_id: uuid.UUID) -> dict[str, int]:
+        assert selected_project_id == project_id
+        return {"indexing_requeued": 2, "deletion_requeued": 1}
+
+    monkeypatch.setattr(admin, "reconcile", reconcile)
+    session = FakeSession(scalar_values=[row])
+    result = await admin.reconcile_project(project_id, session)
+    assert result == {"indexing_requeued": 2, "deletion_requeued": 1}
+    assert session.added[0].payload["action"] == "project.reconcile"  # type: ignore[attr-defined]
+
+    with pytest.raises(HTTPException) as error:
+        await admin.reconcile_project(project_id, FakeSession(scalar_values=[None]))
     assert error.value.status_code == 404
 
 
@@ -253,11 +274,13 @@ async def test_retry_and_cancel_indexing_jobs() -> None:
     retry_session = FakeSession(scalar_values=[job])
     result = await admin.retry_indexing_job(job.id, retry_session)
     assert result["status"] == "queued"
-    assert len(retry_session.added) == 1
+    assert len(retry_session.added) == 2
+    assert retry_session.added[1].payload["action"] == "indexing_job.retry"  # type: ignore[attr-defined]
 
     cancel_session = FakeSession(scalar_values=[job])
     result = await admin.cancel_indexing_job(job.id, cancel_session)
     assert result["status"] == "canceled"
+    assert cancel_session.added[0].payload["action"] == "indexing_job.cancel"  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio

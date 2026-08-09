@@ -171,7 +171,17 @@ async def reconcile_project(
     project = await session.get(Project, project_id)
     if project is None:
         raise HTTPException(404, "project not found")
-    return await reconcile(session, project.id)
+    result = await reconcile(session, project.id)
+    _audit(
+        session,
+        tenant_id=project.tenant_id,
+        project_id=project.id,
+        action="project.reconcile",
+        resource_type="project",
+        resource_id=project.id,
+    )
+    await session.commit()
+    return result
 
 
 @router.post("/api-keys", status_code=201)
@@ -332,7 +342,17 @@ async def reindex_admin_collection(
     row = await session.get(Collection, collection_id)
     if row is None:
         raise HTTPException(404, "collection not found")
-    return await reindex_collection(session, row.tenant_id, row.project_id, row.name)
+    result = await reindex_collection(session, row.tenant_id, row.project_id, row.name)
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=row.project_id,
+        action="collection.reindex",
+        resource_type="collection",
+        resource_id=row.id,
+    )
+    await session.commit()
+    return result
 
 
 @router.get("/indexing/jobs")
@@ -398,6 +418,14 @@ async def retry_indexing_job(
             },
         )
     )
+    _audit(
+        session,
+        tenant_id=job.tenant_id,
+        project_id=job.project_id,
+        action="indexing_job.retry",
+        resource_type="indexing_job",
+        resource_id=job.id,
+    )
     await session.commit()
     return {"id": job.id, "status": "queued"}
 
@@ -415,6 +443,14 @@ async def cancel_indexing_job(
     if job.payload.get("status") != "queued":
         raise HTTPException(409, "only queued jobs can be canceled")
     job.payload = {**job.payload, "status": "canceled"}
+    _audit(
+        session,
+        tenant_id=job.tenant_id,
+        project_id=job.project_id,
+        action="indexing_job.cancel",
+        resource_type="indexing_job",
+        resource_id=job.id,
+    )
     await session.commit()
     return {"id": job.id, "status": "canceled"}
 
