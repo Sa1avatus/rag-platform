@@ -1,5 +1,6 @@
 import {FormEvent, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {useSearchParams} from "react-router-dom";
 import {api} from "./api";
 const Loading=()=> <div className="skeleton">Loading…</div>;
 export function Dashboard(){const q=useQuery({queryKey:["dashboard"],queryFn:()=>api<Record<string,number>>("/v1/admin/dashboard")});if(q.isLoading)return <Loading/>;if(q.error)return <p role="alert">{q.error.message}</p>;return <><header><h1>Dashboard</h1><select aria-label="Period"><option>Last 24 hours</option><option>7 days</option><option>30 days</option></select></header><section className="cards">{Object.entries(q.data??{}).map(([k,v])=><article key={k}><span>{k}</span><strong>{v.toLocaleString()}</strong></article>)}</section></>}
@@ -73,6 +74,70 @@ export function Settings() {
         </form>
       </article>)}
     </section>
+  </>;
+}
+
+type AuditEvent = {
+  id: string;
+  tenant_id: string;
+  project_id: string | null;
+  created_at: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+};
+
+export function auditQuery(params: URLSearchParams) {
+  const query = new URLSearchParams();
+  for (const key of ["action", "tenant_id", "project_id", "limit"]) {
+    const value = params.get(key)?.trim();
+    if (value) query.set(key, value);
+  }
+  if (!query.has("limit")) query.set("limit", "100");
+  return query.toString();
+}
+
+export function AuditLog() {
+  const [params, setParams] = useSearchParams();
+  const queryString = auditQuery(params);
+  const query = useQuery({
+    queryKey: ["audit-log", queryString],
+    queryFn: () => api<AuditEvent[]>(`/v1/admin/audit-log?${queryString}`),
+  });
+
+  function filter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next = new URLSearchParams();
+    for (const key of ["action", "tenant_id", "project_id", "limit"]) {
+      const value = String(form.get(key) ?? "").trim();
+      if (value) next.set(key, value);
+    }
+    setParams(next);
+  }
+
+  return <>
+    <header><div><h1>Audit Log</h1><p className="lede">Administrative mutations with safe resource metadata.</p></div></header>
+    <form className="filters" onSubmit={filter}>
+      <label>Action<input name="action" defaultValue={params.get("action") ?? ""} placeholder="project.update"/></label>
+      <label>Tenant UUID<input name="tenant_id" defaultValue={params.get("tenant_id") ?? ""}/></label>
+      <label>Project UUID<input name="project_id" defaultValue={params.get("project_id") ?? ""}/></label>
+      <label>Limit<input name="limit" type="number" min="1" max="500" defaultValue={params.get("limit") ?? "100"}/></label>
+      <button>Apply filters</button>
+    </form>
+    {query.isLoading && <Loading/>}
+    {query.error && <p role="alert">{query.error.message}</p>}
+    {query.data?.length === 0 && <div className="empty">No audit events match the current filters.</div>}
+    {!!query.data?.length && <table>
+      <thead><tr><th>Time</th><th>Action</th><th>Resource</th><th>Tenant</th><th>Project</th></tr></thead>
+      <tbody>{query.data.map(event => <tr key={event.id}>
+        <td>{new Date(event.created_at).toLocaleString()}</td>
+        <td><span className="badge">{event.action}</span></td>
+        <td>{event.resource_type}<small className="resource-id">{event.resource_id}</small></td>
+        <td className="mono">{event.tenant_id}</td>
+        <td className="mono">{event.project_id ?? "Global"}</td>
+      </tr>)}</tbody>
+    </table>}
   </>;
 }
 export function Placeholder({title}:{title:string}){return <><h1>{title}</h1><div className="empty">No records match the current filters.</div></>}
