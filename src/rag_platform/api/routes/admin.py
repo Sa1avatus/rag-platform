@@ -18,6 +18,7 @@ from rag_platform.api.schemas import (
 from rag_platform.core.auth import Principal, admin, hash_key
 from rag_platform.db.models import (
     ApiKey,
+    AuditLog,
     Chunk,
     Collection,
     Document,
@@ -42,6 +43,28 @@ router = APIRouter(
 )
 
 
+def _audit(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID | None,
+    action: str,
+    resource_type: str,
+    resource_id: uuid.UUID,
+) -> None:
+    session.add(
+        AuditLog(
+            tenant_id=tenant_id,
+            project_id=project_id,
+            payload={
+                "action": action,
+                "resource_type": resource_type,
+                "resource_id": str(resource_id),
+            },
+        )
+    )
+
+
 @router.post("/tenants", status_code=201)
 async def create_tenant(
     data: TenantCreate,
@@ -49,8 +72,16 @@ async def create_tenant(
 ) -> dict[str, object]:
     row = Tenant(name=data.name)
     session.add(row)
+    await session.flush()
+    _audit(
+        session,
+        tenant_id=row.id,
+        project_id=None,
+        action="tenant.create",
+        resource_type="tenant",
+        resource_id=row.id,
+    )
     await session.commit()
-    await session.refresh(row)
     return {"id": row.id, "name": row.name}
 
 
@@ -61,8 +92,16 @@ async def create_project(
 ) -> dict[str, object]:
     row = Project(**data.model_dump())
     session.add(row)
+    await session.flush()
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=row.id,
+        action="project.create",
+        resource_type="project",
+        resource_id=row.id,
+    )
     await session.commit()
-    await session.refresh(row)
     return {"id": row.id, "slug": row.slug, "name": row.name}
 
 
@@ -112,6 +151,14 @@ async def update_project(
         raise HTTPException(404, "project not found")
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(row, field, value)
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=row.id,
+        action="project.update",
+        resource_type="project",
+        resource_id=row.id,
+    )
     await session.commit()
     return await project(project_id, session)
 
@@ -142,6 +189,15 @@ async def create_key(
         permissions=data.permissions,
     )
     session.add(row)
+    await session.flush()
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=None,
+        action="api_key.create",
+        resource_type="api_key",
+        resource_id=row.id,
+    )
     await session.commit()
     return {
         "id": str(row.id),
@@ -180,6 +236,14 @@ async def revoke_api_key(
         raise HTTPException(404, "API key not found")
     if not row.revoked:
         row.revoked = True
+        _audit(
+            session,
+            tenant_id=row.tenant_id,
+            project_id=None,
+            action="api_key.revoke",
+            resource_type="api_key",
+            resource_id=row.id,
+        )
         await session.commit()
 
 
@@ -190,8 +254,16 @@ async def create_collection(
 ) -> dict[str, object]:
     row = Collection(**data.model_dump())
     session.add(row)
+    await session.flush()
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=row.project_id,
+        action="collection.create",
+        resource_type="collection",
+        resource_id=row.id,
+    )
     await session.commit()
-    await session.refresh(row)
     return {"id": row.id, "name": row.name, "settings": row.settings}
 
 
@@ -240,6 +312,14 @@ async def update_collection(
         raise HTTPException(404, "collection not found")
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(row, field, value)
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=row.project_id,
+        action="collection.update",
+        resource_type="collection",
+        resource_id=row.id,
+    )
     await session.commit()
     return await collection(collection_id, session)
 
@@ -346,6 +426,34 @@ async def dashboard(
     documents = await session.scalar(select(func.count()).select_from(Document)) or 0
     chunks = await session.scalar(select(func.count()).select_from(Chunk)) or 0
     return {"documents": documents, "chunks": chunks, "embeddings": chunks}
+
+
+@router.get("/audit-log")
+async def audit_log(
+    action: str | None = None,
+    tenant_id: uuid.UUID | None = None,
+    project_id: uuid.UUID | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    statement = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
+    if action:
+        statement = statement.where(AuditLog.payload["action"].astext == action)
+    if tenant_id:
+        statement = statement.where(AuditLog.tenant_id == tenant_id)
+    if project_id:
+        statement = statement.where(AuditLog.project_id == project_id)
+    rows = (await session.scalars(statement)).all()
+    return [
+        {
+            "id": row.id,
+            "tenant_id": row.tenant_id,
+            "project_id": row.project_id,
+            "created_at": row.created_at,
+            **row.payload,
+        }
+        for row in rows
+    ]
 
 
 @router.get("/system/health")

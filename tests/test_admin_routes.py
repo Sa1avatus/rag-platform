@@ -16,7 +16,7 @@ from rag_platform.api.schemas import (
     TenantCreate,
 )
 from rag_platform.core.auth import Principal
-from rag_platform.db.models import IndexingJob, Project, RetrievalRequest
+from rag_platform.db.models import AuditLog, IndexingJob, Project, RetrievalRequest
 
 
 class ScalarRows:
@@ -39,6 +39,11 @@ class FakeSession:
 
     async def commit(self) -> None:
         self.commits += 1
+
+    async def flush(self) -> None:
+        for value in self.added:
+            if getattr(value, "id", None) is None:
+                value.id = uuid.uuid4()
 
     async def refresh(self, value: Any) -> None:
         if getattr(value, "id", None) is None:
@@ -63,6 +68,7 @@ async def test_create_and_list_projects() -> None:
     )
     assert created["slug"] == "docs"
     assert session.commits == 1
+    assert session.added[1].payload["action"] == "project.create"  # type: ignore[attr-defined]
 
     row = session.added[0]
     listed = await admin.projects(FakeSession(rows=[row]))
@@ -91,6 +97,7 @@ async def test_get_and_update_project() -> None:
     assert updated["enabled"] is False
     assert updated["tenant_id"] == tenant_id
     assert session.commits == 1
+    assert session.added[0].payload["action"] == "project.update"  # type: ignore[attr-defined]
 
     with pytest.raises(HTTPException) as error:
         await admin.project(project_id, FakeSession(scalar_values=[None]))
@@ -104,6 +111,7 @@ async def test_create_tenant() -> None:
     assert created["name"] == "E2E Tenant"
     assert created["id"] is not None
     assert session.commits == 1
+    assert session.added[1].tenant_id == created["id"]  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -115,6 +123,7 @@ async def test_create_collection_and_api_key(monkeypatch: pytest.MonkeyPatch) ->
         collection_session,
     )
     assert collection["name"] == "manuals"
+    assert collection_session.added[1].payload["action"] == "collection.create"  # type: ignore[attr-defined]
 
     monkeypatch.setattr(admin.secrets, "token_urlsafe", lambda size: "stable-secret")
     monkeypatch.setattr(admin, "hash_key", lambda value: "hashed")
@@ -130,6 +139,13 @@ async def test_create_collection_and_api_key(monkeypatch: pytest.MonkeyPatch) ->
     )
     assert key["api_key"] == "rag_stable-secret"
     assert key_session.added[0].key_hash == "hashed"  # type: ignore[attr-defined]
+    audit_payload = key_session.added[1].payload  # type: ignore[attr-defined]
+    assert audit_payload == {
+        "action": "api_key.create",
+        "resource_type": "api_key",
+        "resource_id": str(key_session.added[0].id),  # type: ignore[attr-defined]
+    }
+    assert "rag_stable-secret" not in str(audit_payload)
 
 
 @pytest.mark.asyncio
@@ -153,6 +169,7 @@ async def test_list_and_revoke_api_keys() -> None:
     await admin.revoke_api_key(key_id, session)
     assert row.revoked is True
     assert session.commits == 1
+    assert session.added[0].payload["action"] == "api_key.revoke"  # type: ignore[attr-defined]
 
     await admin.revoke_api_key(key_id, FakeSession(scalar_values=[row]))
     with pytest.raises(HTTPException) as error:
@@ -180,6 +197,7 @@ async def test_get_and_update_collection() -> None:
     assert updated["description"] == "New"
     assert updated["settings"] == {"vector_top_k": 30}
     assert updated["project_id"] == project_id
+    assert session.added[0].payload["action"] == "collection.update"  # type: ignore[attr-defined]
 
     with pytest.raises(HTTPException) as error:
         await admin.collection(collection_id, FakeSession(scalar_values=[None]))
@@ -368,6 +386,39 @@ async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) ->
         lambda: {"scope": "rag-api-container", "cpu": {"count": 2}},
     )
     assert (await admin.resources())["scope"] == "rag-api-container"
+
+
+@pytest.mark.asyncio
+async def test_audit_log_lists_safe_action_metadata() -> None:
+    tenant_id, project_id, audit_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = AuditLog(
+        id=audit_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={
+            "action": "project.update",
+            "resource_type": "project",
+            "resource_id": str(project_id),
+        },
+    )
+    listed = await admin.audit_log(
+        action="project.update",
+        tenant_id=tenant_id,
+        project_id=project_id,
+        limit=25,
+        session=FakeSession(rows=[row]),
+    )
+    assert listed == [
+        {
+            "id": audit_id,
+            "tenant_id": tenant_id,
+            "project_id": project_id,
+            "created_at": None,
+            "action": "project.update",
+            "resource_type": "project",
+            "resource_id": str(project_id),
+        }
+    ]
 
 
 @pytest.mark.asyncio
