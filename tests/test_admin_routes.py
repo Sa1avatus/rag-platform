@@ -5,7 +5,13 @@ import pytest
 from fastapi import HTTPException
 
 from rag_platform.api.routes import admin
-from rag_platform.api.schemas import ApiKeyCreate, CollectionCreate, ProjectCreate, SearchRequest
+from rag_platform.api.schemas import (
+    ApiKeyCreate,
+    CollectionCreate,
+    ProjectCreate,
+    SearchRequest,
+    TenantCreate,
+)
 from rag_platform.core.auth import Principal
 from rag_platform.db.models import IndexingJob, Project
 
@@ -59,6 +65,15 @@ async def test_create_and_list_projects() -> None:
     listed = await admin.projects(FakeSession(rows=[row]))
     assert listed[0]["tenant_id"] == tenant_id
     assert listed[0]["enabled"] is None or listed[0]["enabled"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_tenant() -> None:
+    session = FakeSession()
+    created = await admin.create_tenant(TenantCreate(name="E2E Tenant"), session)
+    assert created["name"] == "E2E Tenant"
+    assert created["id"] is not None
+    assert session.commits == 1
 
 
 @pytest.mark.asyncio

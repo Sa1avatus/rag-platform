@@ -10,6 +10,7 @@ from rag_platform.api.schemas import (
     CollectionCreate,
     ProjectCreate,
     SearchRequest,
+    TenantCreate,
 )
 from rag_platform.core.auth import Principal, admin, hash_key
 from rag_platform.db.models import (
@@ -20,6 +21,7 @@ from rag_platform.db.models import (
     IndexingJob,
     OutboxEvent,
     Project,
+    Tenant,
 )
 from rag_platform.db.session import get_session
 from rag_platform.services.health import system_health
@@ -31,6 +33,18 @@ router = APIRouter(
     tags=["admin"],
     dependencies=[Depends(admin)],
 )
+
+
+@router.post("/tenants", status_code=201)
+async def create_tenant(
+    data: TenantCreate,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = Tenant(name=data.name)
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+    return {"id": row.id, "name": row.name}
 
 
 @router.post("/projects", status_code=201)

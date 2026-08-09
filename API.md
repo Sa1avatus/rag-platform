@@ -17,3 +17,5 @@ limits are enforced server-side.
 Administrators can inspect jobs through `GET /v1/admin/indexing/jobs`, retry failed or dead-letter
 jobs through `POST /v1/admin/indexing/jobs/{job_id}/retry`, and cancel jobs that are still queued
 through `POST /v1/admin/indexing/jobs/{job_id}/cancel`. Running jobs cannot be canceled by this API.
+Create a tenant with `POST /v1/admin/tenants` before registering projects or service API keys for
+that tenant.

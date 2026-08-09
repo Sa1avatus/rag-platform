@@ -65,6 +65,10 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
+class TenantCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
 class ApiKeyCreate(BaseModel):
     tenant_id: uuid.UUID
     allowed_project_ids: list[uuid.UUID]
