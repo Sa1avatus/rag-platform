@@ -32,6 +32,7 @@ from rag_platform.db.models import (
     IndexingJob,
     OutboxEvent,
     Project,
+    RetrievalFeedback,
     RetrievalRequest,
     Tenant,
 )
@@ -349,6 +350,43 @@ async def admin_create_evaluation_run(
     )
     await session.commit()
     return {"id": run.id, "status": "queued"}
+
+
+@router.get("/feedback")
+async def admin_feedback(
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    relevant: bool | None = None,
+    collection: str | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    filters = [
+        RetrievalFeedback.tenant_id == tenant_id,
+        RetrievalFeedback.project_id == project_id,
+    ]
+    if relevant is not None:
+        filters.append(RetrievalFeedback.payload["relevant"].astext == str(relevant).lower())
+    if collection:
+        filters.append(RetrievalFeedback.payload["collection"].astext == collection)
+    rows = (
+        await session.scalars(
+            select(RetrievalFeedback)
+            .where(*filters)
+            .order_by(RetrievalFeedback.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [
+        {
+            "id": row.id,
+            "tenant_id": row.tenant_id,
+            "project_id": row.project_id,
+            "created_at": row.created_at,
+            **row.payload,
+        }
+        for row in rows
+    ]
 
 
 @router.get("/projects/{project_id}")

@@ -125,6 +125,54 @@ export function Evaluation() {
     </aside>}
   </>;
 }
+
+type FeedbackItem = {id:string; created_at:string; request_id:string; chunk_id:string; collection:string; relevant:boolean; relevance_grade:number|null; comment:string|null};
+
+export function feedbackScope(tenantId:string, projectId:string, relevant:string, collection:string) {
+  const query = new URLSearchParams({tenant_id:tenantId,project_id:projectId,limit:"100"});
+  if (relevant) query.set("relevant",relevant);
+  if (collection) query.set("collection",collection);
+  return query.toString();
+}
+
+export function Feedback() {
+  const [params,setParams] = useSearchParams();
+  const projectId = params.get("project_id") ?? "";
+  const relevant = params.get("relevant") ?? "";
+  const collection = params.get("collection") ?? "";
+  const projects = useQuery({queryKey:["projects"],queryFn:()=>api<ProjectOption[]>("/v1/admin/projects")});
+  const project = projects.data?.find(item=>item.id===projectId);
+  const scope = project ? feedbackScope(project.tenant_id,project.id,relevant,collection) : "";
+  const query = useQuery({queryKey:["feedback",scope],queryFn:()=>api<FeedbackItem[]>(`/v1/admin/feedback?${scope}`),enabled:Boolean(scope)});
+  function filter(event:FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next = new URLSearchParams();
+    for (const key of ["project_id","relevant","collection"]) {
+      const value = String(form.get(key)??"").trim();
+      if (value) next.set(key,value);
+    }
+    setParams(next);
+  }
+  const positive = query.data?.filter(item=>item.relevant).length ?? 0;
+
+  return <>
+    <header><div><h1>Feedback</h1><p className="lede">Retrieval relevance judgments scoped to an explicit tenant and project.</p></div></header>
+    <form className="feedback-filter" onSubmit={filter}>
+      <label>Project<select name="project_id" defaultValue={projectId} required><option value="">Select a project</option>{projects.data?.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label>Judgment<select name="relevant" defaultValue={relevant}><option value="">All judgments</option><option value="true">Relevant</option><option value="false">Not relevant</option></select></label>
+      <label>Collection<input name="collection" defaultValue={collection} placeholder="manuals"/></label><button>Apply filters</button>
+    </form>
+    {!projectId&&<div className="empty">Select a project to inspect retrieval feedback.</div>}
+    {query.isLoading&&<Loading/>}{query.error&&<p role="alert">{query.error.message}</p>}
+    {!!query.data&&<section className="cards feedback-cards"><article><span>Judgments</span><strong>{query.data.length}</strong></article><article><span>Relevant</span><strong className="healthy">{positive}</strong></article><article><span>Not relevant</span><strong className="unhealthy">{query.data.length-positive}</strong></article></section>}
+    {query.data?.length===0&&<div className="empty">No feedback matches this scope.</div>}
+    {!!query.data?.length&&<table><thead><tr><th>Time</th><th>Judgment</th><th>Grade</th><th>Collection</th><th>Request / chunk</th><th>Comment</th></tr></thead><tbody>{query.data.map(item=><tr key={item.id}>
+      <td>{new Date(item.created_at).toLocaleString()}</td><td><span className={`badge ${item.relevant?"status-completed":"status-failed"}`}>{item.relevant?"Relevant":"Not relevant"}</span></td><td>{item.relevance_grade??"—"}</td><td>{item.collection}</td>
+      <td><small className="mono">{item.request_id}</small><small className="mono resource-id">{item.chunk_id}</small></td><td>{item.comment??"—"}</td>
+    </tr>)}</tbody></table>}
+  </>;
+}
 export function SearchPlayground(){const [result,setResult]=useState<any>();async function run(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setResult(await api("/v1/admin/retrieval/search",{method:"POST",body:JSON.stringify({project_id:f.get("project_id"),collections:String(f.get("collections")).split(","),query:f.get("query"),include_trace:true})}))}return <><h1>Search Playground</h1><form onSubmit={run}><input name="project_id" placeholder="Project UUID" required/><input name="collections" placeholder="Collection names" required/><textarea name="query" placeholder="Ask a retrieval question" required/><button>Search</button></form>{result&&<pre>{JSON.stringify(result,null,2)}</pre>}</>}
 export function SystemHealth(){const q=useQuery({queryKey:["health"],queryFn:()=>api<any>("/v1/admin/system/health"),refetchInterval:10000});return <><h1>System Health</h1>{q.isLoading?<Loading/>:<section className="cards">{q.data?.components.map((c:any)=><article key={c.name}><span>{c.name}</span><strong className="healthy">{c.status}</strong></article>)}</section>}</>}
 

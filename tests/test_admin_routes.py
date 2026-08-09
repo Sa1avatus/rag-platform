@@ -29,6 +29,7 @@ from rag_platform.db.models import (
     EvaluationResult,
     IndexingJob,
     Project,
+    RetrievalFeedback,
     RetrievalRequest,
 )
 
@@ -183,6 +184,30 @@ async def test_admin_evaluation_listing_run_and_results() -> None:
         run.id, tenant_id, project_id, FakeSession(scalar_values=[run], rows=[result])
     )
     assert detail["results"][0]["recall_at_5"] == 1.0  # type: ignore[index]
+
+
+@pytest.mark.asyncio
+async def test_admin_feedback_is_explicitly_scoped() -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    row = RetrievalFeedback(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        created_at=datetime.now(UTC),
+        payload={
+            "request_id": str(uuid.uuid4()),
+            "chunk_id": str(uuid.uuid4()),
+            "collection": "manuals",
+            "relevant": True,
+            "relevance_grade": 3,
+            "comment": "useful",
+        },
+    )
+    result = await admin.admin_feedback(
+        tenant_id, project_id, True, "manuals", 100, FakeSession(rows=[row])
+    )
+    assert result[0]["tenant_id"] == tenant_id
+    assert result[0]["relevant"] is True
 
 
 @pytest.mark.asyncio
