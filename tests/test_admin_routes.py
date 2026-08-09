@@ -374,3 +374,18 @@ async def test_reranker_admin_endpoints(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(admin, "test_reranker_connection", test_connection)
     assert (await admin.reranker())["model"] == "cross-encoder"
     assert (await admin.test_reranker())["result_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_embedding_admin_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def profile() -> dict[str, object]:
+        return {
+            "status": "ready",
+            "model": "BAAI/bge-m3",
+            "dimension": 1024,
+            "compatible": True,
+        }
+
+    monkeypatch.setattr(admin, "embedding_profile", profile)
+    assert (await admin.embeddings())["compatible"] is True
+    assert (await admin.check_embeddings())["dimension"] == 1024

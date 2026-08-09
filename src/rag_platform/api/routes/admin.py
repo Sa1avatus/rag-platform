@@ -27,6 +27,7 @@ from rag_platform.db.models import (
     Tenant,
 )
 from rag_platform.db.session import get_session
+from rag_platform.services.embedding_admin import embedding_profile
 from rag_platform.services.health import system_health
 from rag_platform.services.reconciliation import reconcile, reindex_collection
 from rag_platform.services.reranker import reranker_status, test_reranker_connection
@@ -368,6 +369,16 @@ async def reranker() -> dict[str, object]:
 @router.post("/reranker/test")
 async def test_reranker() -> dict[str, object]:
     return await test_reranker_connection()
+
+
+@router.get("/models/embeddings")
+async def embeddings() -> dict[str, object]:
+    return await embedding_profile()
+
+
+@router.post("/models/embeddings/check")
+async def check_embeddings() -> dict[str, object]:
+    return await embedding_profile()
 
 
 @router.post("/retrieval/search")
