@@ -188,6 +188,7 @@ async def search(
             payload={
                 "query": data.query,
                 "collections": data.collections,
+                "filters": data.filters,
                 "configuration": {
                     "vector_top_k": data.vector_top_k,
                     "bm25_top_k": data.bm25_top_k,

@@ -26,6 +26,9 @@ Projects and collections support detail reads and partial updates at
 project ownership fields are immutable through these endpoints.
 `POST /v1/admin/collections/{collection_id}/reindex` requeues every current, non-deleted version in
 that collection while skipping versions that already have active indexing jobs.
+Administrative retrieval traces are available through `GET /v1/admin/retrieval/traces` and its
+detail endpoint. `POST /v1/admin/retrieval/traces/{request_id}/repeat` replays the stored query,
+collections, metadata filters, and retrieval configuration into a new trace.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns

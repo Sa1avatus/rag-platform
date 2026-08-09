@@ -23,6 +23,7 @@ from rag_platform.db.models import (
     IndexingJob,
     OutboxEvent,
     Project,
+    RetrievalRequest,
     Tenant,
 )
 from rag_platform.db.session import get_session
@@ -341,3 +342,76 @@ async def admin_search(
     )
     request_id, results, trace = await search(session, who, data)
     return {"request_id": request_id, "results": results, "trace": trace}
+
+
+def _retrieval_trace_read(row: RetrievalRequest) -> dict[str, object]:
+    return {
+        "id": row.id,
+        "tenant_id": row.tenant_id,
+        "project_id": row.project_id,
+        "created_at": row.created_at,
+        **row.payload,
+    }
+
+
+@router.get("/retrieval/traces")
+async def retrieval_traces(
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    rows = (
+        await session.scalars(
+            select(RetrievalRequest).order_by(RetrievalRequest.created_at.desc()).limit(limit)
+        )
+    ).all()
+    return [_retrieval_trace_read(row) for row in rows]
+
+
+@router.get("/retrieval/traces/{request_id}")
+async def retrieval_trace(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(RetrievalRequest, request_id)
+    if row is None:
+        raise HTTPException(404, "retrieval trace not found")
+    return _retrieval_trace_read(row)
+
+
+@router.post("/retrieval/traces/{request_id}/repeat", status_code=202)
+async def repeat_retrieval_trace(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(RetrievalRequest, request_id)
+    if row is None or row.project_id is None:
+        raise HTTPException(404, "retrieval trace not found")
+    configuration = row.payload.get("configuration", {})
+    if not isinstance(configuration, dict):
+        raise HTTPException(409, "retrieval trace configuration is invalid")
+    collections = row.payload.get("collections", [])
+    if not isinstance(collections, list) or not all(isinstance(item, str) for item in collections):
+        raise HTTPException(409, "retrieval trace collections are invalid")
+    query = row.payload.get("query")
+    if not isinstance(query, str):
+        raise HTTPException(409, "retrieval trace query is invalid")
+    who = Principal(
+        row.tenant_id,
+        frozenset({row.project_id}),
+        frozenset(collections),
+        frozenset({"retrieval:search"}),
+    )
+    data = SearchRequest(
+        project_id=row.project_id,
+        collections=collections,
+        query=query,
+        filters=row.payload.get("filters", {}),
+        vector_top_k=int(configuration.get("vector_top_k", 30)),
+        bm25_top_k=int(configuration.get("bm25_top_k", 30)),
+        fusion_top_k=int(configuration.get("fusion_top_k", 20)),
+        rerank_top_k=int(configuration.get("rerank_top_k", 5)),
+        use_reranker=bool(configuration.get("use_reranker", True)),
+        include_trace=True,
+    )
+    repeated_id, results, trace = await search(session, who, data)
+    return {"request_id": repeated_id, "results": results, "trace": trace}

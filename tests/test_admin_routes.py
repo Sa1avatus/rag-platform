@@ -15,7 +15,7 @@ from rag_platform.api.schemas import (
     TenantCreate,
 )
 from rag_platform.core.auth import Principal
-from rag_platform.db.models import IndexingJob, Project
+from rag_platform.db.models import IndexingJob, Project, RetrievalRequest
 
 
 class ScalarRows:
@@ -266,6 +266,55 @@ async def test_admin_search_uses_project_tenant(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(HTTPException) as error:
         await admin.admin_search(data, FakeSession(scalar_values=[None]))
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_retrieval_trace_detail_and_repeat(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id, request_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = RetrievalRequest(
+        id=request_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={
+            "query": "operations",
+            "collections": ["manuals"],
+            "filters": {"approved": True},
+            "configuration": {
+                "vector_top_k": 10,
+                "bm25_top_k": 11,
+                "fusion_top_k": 9,
+                "rerank_top_k": 3,
+                "use_reranker": False,
+            },
+            "results": [],
+            "trace": {"retrieval_strategy": "hybrid_rrf"},
+        },
+    )
+    repeated_id = uuid.uuid4()
+
+    async def search(
+        session: object,
+        who: Principal,
+        data: SearchRequest,
+    ) -> tuple[uuid.UUID, list[object], dict[str, object]]:
+        assert who.tenant_id == tenant_id
+        assert data.filters == {"approved": True}
+        assert data.vector_top_k == 10
+        assert data.use_reranker is False
+        return repeated_id, [], {"retrieval_strategy": "hybrid_rrf"}
+
+    monkeypatch.setattr(admin, "search", search)
+    detail = await admin.retrieval_trace(request_id, FakeSession(scalar_values=[row]))
+    assert detail["query"] == "operations"
+    repeated = await admin.repeat_retrieval_trace(
+        request_id,
+        FakeSession(scalar_values=[row]),
+    )
+    assert repeated["request_id"] == repeated_id
+
+    with pytest.raises(HTTPException) as error:
+        await admin.retrieval_trace(request_id, FakeSession(scalar_values=[None]))
     assert error.value.status_code == 404
 
 
