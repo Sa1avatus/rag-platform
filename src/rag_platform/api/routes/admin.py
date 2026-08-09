@@ -9,6 +9,7 @@ from rag_platform.api.schemas import (
     ApiKeyCreate,
     CollectionCreate,
     CollectionUpdate,
+    ConfigurationComparisonRequest,
     EmbeddingReindexRequest,
     ProjectCreate,
     ProjectUpdate,
@@ -353,6 +354,47 @@ async def reindex_admin_collection(
     )
     await session.commit()
     return result
+
+
+@router.post("/collections/{collection_id}/compare-configurations")
+async def compare_collection_configurations(
+    collection_id: uuid.UUID,
+    data: ConfigurationComparisonRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(Collection, collection_id)
+    if row is None:
+        raise HTTPException(404, "collection not found")
+    who = Principal(
+        row.tenant_id,
+        frozenset({row.project_id}),
+        frozenset({row.name}),
+        frozenset({"retrieval:search"}),
+    )
+    comparisons: dict[str, dict[str, object]] = {}
+    result_ids: dict[str, set[str]] = {}
+    for label, configuration in (("baseline", data.baseline), ("candidate", data.candidate)):
+        request = SearchRequest(
+            project_id=row.project_id,
+            collections=[row.name],
+            query=data.query,
+            filters=data.filters,
+            include_trace=True,
+            **configuration.model_dump(),
+        )
+        request_id, results, trace = await search(session, who, request)
+        comparisons[label] = {"request_id": request_id, "results": results, "trace": trace}
+        result_ids[label] = {str(result["chunk_id"]) for result in results if "chunk_id" in result}
+    baseline_ids = result_ids["baseline"]
+    candidate_ids = result_ids["candidate"]
+    return {
+        **comparisons,
+        "overlap": {
+            "shared_chunks": len(baseline_ids & candidate_ids),
+            "baseline_only": len(baseline_ids - candidate_ids),
+            "candidate_only": len(candidate_ids - baseline_ids),
+        },
+    }
 
 
 @router.get("/indexing/jobs")

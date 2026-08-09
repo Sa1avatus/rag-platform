@@ -109,6 +109,22 @@ class CollectionUpdate(BaseModel):
     settings: dict[str, Any] | None = None
 
 
+class RetrievalConfiguration(BaseModel):
+    vector_top_k: int = Field(default=30, ge=1, le=200)
+    bm25_top_k: int = Field(default=30, ge=1, le=200)
+    fusion_top_k: int = Field(default=20, ge=1, le=100)
+    rerank_top_k: int = Field(default=5, ge=1, le=50)
+    use_reranker: bool = True
+    include_parent_content: bool = True
+
+
+class ConfigurationComparisonRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=10_000)
+    filters: dict[str, Any] = Field(default_factory=dict)
+    baseline: RetrievalConfiguration
+    candidate: RetrievalConfiguration
+
+
 class EmbeddingReindexRequest(BaseModel):
     confirm: bool
 

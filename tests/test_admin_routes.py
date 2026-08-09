@@ -9,9 +9,11 @@ from rag_platform.api.schemas import (
     ApiKeyCreate,
     CollectionCreate,
     CollectionUpdate,
+    ConfigurationComparisonRequest,
     EmbeddingReindexRequest,
     ProjectCreate,
     ProjectUpdate,
+    RetrievalConfiguration,
     SearchRequest,
     TenantCreate,
 )
@@ -238,6 +240,57 @@ async def test_reindex_collection(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(HTTPException) as error:
         await admin.reindex_admin_collection(
             collection_id,
+            FakeSession(scalar_values=[None]),
+        )
+    assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_compare_collection_configurations(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id, project_id, collection_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = admin.Collection(
+        id=collection_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        name="manuals",
+    )
+    shared, baseline_only, candidate_only = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    calls: list[SearchRequest] = []
+
+    async def search(
+        session: object,
+        who: Principal,
+        request: SearchRequest,
+    ) -> tuple[uuid.UUID, list[dict[str, object]], dict[str, object]]:
+        assert who.tenant_id == tenant_id
+        assert request.collections == ["manuals"]
+        calls.append(request)
+        chunks = [shared, baseline_only] if len(calls) == 1 else [shared, candidate_only]
+        return uuid.uuid4(), [{"chunk_id": chunk} for chunk in chunks], {"latency_ms": 1.0}
+
+    monkeypatch.setattr(admin, "search", search)
+    result = await admin.compare_collection_configurations(
+        collection_id,
+        ConfigurationComparisonRequest(
+            query="operations",
+            filters={"approved": True},
+            baseline=RetrievalConfiguration(vector_top_k=10, use_reranker=False),
+            candidate=RetrievalConfiguration(vector_top_k=40, use_reranker=True),
+        ),
+        FakeSession(scalar_values=[row]),
+    )
+    assert [request.vector_top_k for request in calls] == [10, 40]
+    assert all(request.filters == {"approved": True} for request in calls)
+    assert result["overlap"] == {"shared_chunks": 1, "baseline_only": 1, "candidate_only": 1}
+
+    with pytest.raises(HTTPException) as error:
+        await admin.compare_collection_configurations(
+            collection_id,
+            ConfigurationComparisonRequest(
+                query="operations",
+                baseline=RetrievalConfiguration(),
+                candidate=RetrievalConfiguration(),
+            ),
             FakeSession(scalar_values=[None]),
         )
     assert error.value.status_code == 404

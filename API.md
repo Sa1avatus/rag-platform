@@ -28,6 +28,9 @@ Projects and collections support detail reads and partial updates at
 project ownership fields are immutable through these endpoints.
 `POST /v1/admin/collections/{collection_id}/reindex` requeues every current, non-deleted version in
 that collection while skipping versions that already have active indexing jobs.
+`POST /v1/admin/collections/{collection_id}/compare-configurations` runs baseline and candidate
+retrieval settings against the same query and collection scope, returning both traces plus chunk
+overlap counts.
 Administrative retrieval traces are available through `GET /v1/admin/retrieval/traces` and its
 detail endpoint. `POST /v1/admin/retrieval/traces/{request_id}/repeat` replays the stored query,
 collections, metadata filters, and retrieval configuration into a new trace.
