@@ -140,4 +140,63 @@ export function AuditLog() {
     </table>}
   </>;
 }
+
+type IndexingJob = {
+  id: string;
+  tenant_id: string;
+  project_id: string | null;
+  status: string;
+  stage?: string;
+  job_type?: string;
+  error?: string | null;
+};
+
+export const canRetryJob = (status: string) => status === "failed" || status === "dead_letter";
+export const canCancelJob = (status: string) => status === "queued";
+
+export function Indexing() {
+  const client = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const status = params.get("status") ?? "";
+  const queryString = new URLSearchParams({limit: "100"});
+  if (status) queryString.set("status", status);
+  const query = useQuery({
+    queryKey: ["indexing-jobs", queryString.toString()],
+    queryFn: () => api<IndexingJob[]>(`/v1/admin/indexing/jobs?${queryString}`),
+    refetchInterval: 10000,
+  });
+  const mutation = useMutation({
+    mutationFn: ({id, action}:{id:string; action:"retry"|"cancel"}) =>
+      api(`/v1/admin/indexing/jobs/${id}/${action}`, {method: "POST"}),
+    onSuccess: () => client.invalidateQueries({queryKey: ["indexing-jobs"]}),
+  });
+
+  async function act(job: IndexingJob, action: "retry" | "cancel") {
+    if (!window.confirm(`${action === "retry" ? "Retry" : "Cancel"} job ${job.id}?`)) return;
+    await mutation.mutateAsync({id: job.id, action});
+  }
+
+  return <>
+    <header><div><h1>Indexing</h1><p className="lede">Queue state and controlled recovery actions.</p></div>
+      <label>Status<select value={status} onChange={event => setParams(event.target.value ? {status:event.target.value} : {})}>
+        <option value="">All statuses</option><option value="queued">Queued</option><option value="processing">Processing</option><option value="failed">Failed</option><option value="dead_letter">Dead letter</option><option value="completed">Completed</option>
+      </select></label>
+    </header>
+    {mutation.error && <p role="alert">{mutation.error.message}</p>}
+    {query.isLoading && <Loading/>}
+    {query.error && <p role="alert">{query.error.message}</p>}
+    {query.data?.length === 0 && <div className="empty">No indexing jobs match this status.</div>}
+    {!!query.data?.length && <table><thead><tr><th>Status</th><th>Type / stage</th><th>Project</th><th>Error</th><th>Actions</th></tr></thead>
+      <tbody>{query.data.map(job => <tr key={job.id}>
+        <td><span className={`badge status-${job.status}`}>{job.status}</span></td>
+        <td>{job.job_type ?? "document.index"}<small className="resource-id">{job.stage ?? "Pending"}</small></td>
+        <td className="mono">{job.project_id ?? "Global"}</td><td>{job.error ?? "—"}</td>
+        <td><div className="actions">
+          {canRetryJob(job.status) && <button disabled={mutation.isPending} onClick={() => act(job,"retry")}>Retry</button>}
+          {canCancelJob(job.status) && <button className="danger" disabled={mutation.isPending} onClick={() => act(job,"cancel")}>Cancel</button>}
+          {!canRetryJob(job.status) && !canCancelJob(job.status) && <small>No actions</small>}
+        </div></td>
+      </tr>)}</tbody></table>}
+  </>;
+}
 export function Placeholder({title}:{title:string}){return <><h1>{title}</h1><div className="empty">No records match the current filters.</div></>}

@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {auditQuery, settingValue} from "./pages";
+import {auditQuery, canCancelJob, canRetryJob, settingValue} from "./pages";
 
 describe("settingValue", () => {
   it("parses boolean controls", () => {
@@ -16,5 +16,14 @@ describe("auditQuery", () => {
   it("keeps supported URL filters and supplies a limit", () => {
     const params = new URLSearchParams("action=project.update&ignored=value");
     expect(auditQuery(params)).toBe("action=project.update&limit=100");
+  });
+});
+
+describe("indexing job actions", () => {
+  it("only enables actions for safe states", () => {
+    expect(canRetryJob("failed")).toBe(true);
+    expect(canRetryJob("processing")).toBe(false);
+    expect(canCancelJob("queued")).toBe(true);
+    expect(canCancelJob("processing")).toBe(false);
   });
 });
