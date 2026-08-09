@@ -377,6 +377,36 @@ def _indexing_job_read(row: IndexingJob) -> dict[str, object]:
     }
 
 
+def _queue_job_retry(session: AsyncSession, job: IndexingJob) -> bool:
+    job_type = job.payload.get("job_type", "document.index")
+    identifier_field = "document_id" if job_type == "document.delete" else "version_id"
+    identifier = job.payload.get(identifier_field)
+    if not isinstance(identifier, str):
+        return False
+    job.payload = {**job.payload, "status": "queued", "error": None}
+    session.add(
+        OutboxEvent(
+            tenant_id=job.tenant_id,
+            project_id=job.project_id,
+            payload={
+                "type": job_type,
+                identifier_field: identifier,
+                "job_id": str(job.id),
+                "attempts": 0,
+            },
+        )
+    )
+    _audit(
+        session,
+        tenant_id=job.tenant_id,
+        project_id=job.project_id,
+        action="indexing_job.retry",
+        resource_type="indexing_job",
+        resource_id=job.id,
+    )
+    return True
+
+
 @router.get("/indexing/jobs/{job_id}")
 async def indexing_job(
     job_id: uuid.UUID,
@@ -400,34 +430,32 @@ async def retry_indexing_job(
         raise HTTPException(404, "indexing job not found")
     if job.payload.get("status") not in {"failed", "dead_letter"}:
         raise HTTPException(409, "only failed or dead-letter jobs can be retried")
-    job_type = job.payload.get("job_type", "document.index")
-    identifier_field = "document_id" if job_type == "document.delete" else "version_id"
-    identifier = job.payload.get(identifier_field)
-    if not isinstance(identifier, str):
+    if not _queue_job_retry(session, job):
         raise HTTPException(409, "indexing job has no target identifier")
-    job.payload = {**job.payload, "status": "queued", "error": None}
-    session.add(
-        OutboxEvent(
-            tenant_id=job.tenant_id,
-            project_id=job.project_id,
-            payload={
-                "type": job_type,
-                identifier_field: identifier,
-                "job_id": str(job.id),
-                "attempts": 0,
-            },
-        )
-    )
-    _audit(
-        session,
-        tenant_id=job.tenant_id,
-        project_id=job.project_id,
-        action="indexing_job.retry",
-        resource_type="indexing_job",
-        resource_id=job.id,
-    )
     await session.commit()
     return {"id": job.id, "status": "queued"}
+
+
+@router.post("/indexing/jobs/retry-filtered", status_code=202)
+async def retry_filtered_indexing_jobs(
+    status: str = Query(default="failed", pattern="^(failed|dead_letter)$"),
+    project_id: uuid.UUID | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, int]:
+    statement = (
+        select(IndexingJob)
+        .where(IndexingJob.payload["status"].astext == status)
+        .order_by(IndexingJob.created_at)
+        .limit(limit)
+        .with_for_update(skip_locked=True)
+    )
+    if project_id:
+        statement = statement.where(IndexingJob.project_id == project_id)
+    jobs = (await session.scalars(statement)).all()
+    retried = sum(_queue_job_retry(session, job) for job in jobs)
+    await session.commit()
+    return {"matched": len(jobs), "retried": retried, "skipped_invalid": len(jobs) - retried}
 
 
 @router.post("/indexing/jobs/{job_id}/cancel")

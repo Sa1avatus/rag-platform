@@ -284,6 +284,40 @@ async def test_retry_and_cancel_indexing_jobs() -> None:
 
 
 @pytest.mark.asyncio
+async def test_retry_filtered_indexing_jobs_batches_valid_targets() -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    valid = IndexingJob(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={
+            "status": "dead_letter",
+            "job_type": "document.delete",
+            "document_id": str(uuid.uuid4()),
+        },
+    )
+    invalid = IndexingJob(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={"status": "dead_letter", "job_type": "document.index"},
+    )
+    session = FakeSession(rows=[valid, invalid])
+    result = await admin.retry_filtered_indexing_jobs(
+        status="dead_letter",
+        project_id=project_id,
+        limit=25,
+        session=session,
+    )
+    assert result == {"matched": 2, "retried": 1, "skipped_invalid": 1}
+    assert valid.payload["status"] == "queued"
+    assert invalid.payload["status"] == "dead_letter"
+    assert session.commits == 1
+    assert session.added[0].payload["type"] == "document.delete"  # type: ignore[attr-defined]
+    assert session.added[1].payload["action"] == "indexing_job.retry"  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
 async def test_get_indexing_job() -> None:
     tenant_id, project_id, job_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     row = IndexingJob(

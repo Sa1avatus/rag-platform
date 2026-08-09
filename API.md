@@ -17,6 +17,8 @@ limits are enforced server-side.
 Administrators can inspect jobs through `GET /v1/admin/indexing/jobs`, retry failed or dead-letter
 jobs through `POST /v1/admin/indexing/jobs/{job_id}/retry`, and cancel jobs that are still queued
 through `POST /v1/admin/indexing/jobs/{job_id}/cancel`. Running jobs cannot be canceled by this API.
+`POST /v1/admin/indexing/jobs/retry-filtered` retries up to 500 failed or dead-letter jobs selected
+by status and optional project, skips malformed legacy targets, and commits the batch atomically.
 `GET /v1/admin/indexing/jobs/{job_id}` returns one job using the same status and stage fields as the
 list response.
 Create a tenant with `POST /v1/admin/tenants` before registering projects or service API keys for
