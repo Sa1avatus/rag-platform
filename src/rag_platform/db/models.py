@@ -89,6 +89,12 @@ class Collection(Base, TimestampMixin):
     settings: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
 
+class RuntimeSetting(Base, TimestampMixin):
+    __tablename__ = "runtime_settings"
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[Any] = mapped_column(JSONB)
+
+
 class Document(Base, TimestampMixin):
     __tablename__ = "documents"
     __table_args__ = (

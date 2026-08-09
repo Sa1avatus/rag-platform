@@ -14,6 +14,7 @@ from rag_platform.api.schemas import (
     EmbeddingReindexRequest,
     ProjectCreate,
     ProjectUpdate,
+    RuntimeSettingsUpdate,
     SearchRequest,
     TenantCreate,
 )
@@ -38,6 +39,7 @@ from rag_platform.services.reconciliation import reconcile, reindex_collection, 
 from rag_platform.services.reranker import reranker_status, test_reranker_connection
 from rag_platform.services.resources import system_resources
 from rag_platform.services.retrieval import search
+from rag_platform.services.runtime_settings import apply_runtime_settings, runtime_settings_response
 
 router = APIRouter(
     prefix="/v1/admin",
@@ -613,13 +615,32 @@ async def resources() -> dict[str, object]:
 
 
 @router.get("/settings")
-async def settings() -> dict[str, object]:
-    return {
-        "default_vector_top_k": 30,
-        "default_bm25_top_k": 30,
-        "default_fusion_top_k": 20,
-        "reranker_enabled": True,
-    }
+async def settings(
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    return await runtime_settings_response(session)
+
+
+@router.patch("/settings")
+async def update_settings(
+    data: RuntimeSettingsUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    updates = data.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(422, "at least one setting is required")
+    await apply_runtime_settings(session, updates)
+    global_scope = uuid.UUID(int=0)
+    _audit(
+        session,
+        tenant_id=global_scope,
+        project_id=None,
+        action="runtime_settings.update",
+        resource_type="runtime_settings",
+        resource_id=global_scope,
+    )
+    await session.commit()
+    return await runtime_settings_response(session)
 
 
 @router.get("/reranker/status")

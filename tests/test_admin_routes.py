@@ -15,6 +15,7 @@ from rag_platform.api.schemas import (
     ProjectCreate,
     ProjectUpdate,
     RetrievalConfiguration,
+    RuntimeSettingsUpdate,
     SearchRequest,
     TenantCreate,
 )
@@ -483,7 +484,9 @@ async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) ->
         "chunks": 9,
         "embeddings": 9,
     }
-    assert (await admin.settings())["default_vector_top_k"] == 30
+    settings = await admin.settings(FakeSession())
+    vector = next(item for item in settings["settings"] if item["key"] == "default_vector_top_k")  # type: ignore[union-attr]
+    assert vector["value"] == 30
 
     async def system_health() -> dict[str, object]:
         return {"status": "operational", "components": []}
@@ -497,6 +500,24 @@ async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) ->
         lambda: {"scope": "rag-api-container", "cpu": {"count": 2}},
     )
     assert (await admin.resources())["scope"] == "rag-api-container"
+
+
+@pytest.mark.asyncio
+async def test_update_runtime_settings_is_persistent_and_audited() -> None:
+    session = FakeSession()
+    response = await admin.update_settings(
+        RuntimeSettingsUpdate(default_vector_top_k=40, reranker_enabled=False),
+        session,
+    )
+    assert response["settings"]
+    assert session.commits == 1
+    assert session.added[0].key == "default_vector_top_k"  # type: ignore[attr-defined]
+    assert session.added[1].key == "reranker_enabled"  # type: ignore[attr-defined]
+    assert session.added[2].payload["action"] == "runtime_settings.update"  # type: ignore[attr-defined]
+
+    with pytest.raises(HTTPException) as error:
+        await admin.update_settings(RuntimeSettingsUpdate(), FakeSession())
+    assert error.value.status_code == 422
 
 
 @pytest.mark.asyncio

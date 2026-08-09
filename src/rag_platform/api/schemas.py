@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentCreate(BaseModel):
@@ -123,6 +123,24 @@ class ConfigurationComparisonRequest(BaseModel):
     filters: dict[str, Any] = Field(default_factory=dict)
     baseline: RetrievalConfiguration
     candidate: RetrievalConfiguration
+
+
+class RuntimeSettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    default_vector_top_k: int | None = Field(default=None, ge=1, le=200)
+    default_bm25_top_k: int | None = Field(default=None, ge=1, le=200)
+    default_fusion_top_k: int | None = Field(default=None, ge=1, le=100)
+    default_rerank_top_k: int | None = Field(default=None, ge=1, le=50)
+    reranker_enabled: bool | None = None
+    query_normalization_enabled: bool | None = None
+    query_expansion_enabled: bool | None = None
+    parent_content_enabled: bool | None = None
+    indexing_concurrency: int | None = Field(default=None, ge=1, le=64)
+    embedding_batch_size: int | None = Field(default=None, ge=1, le=256)
+    document_max_bytes: int | None = Field(default=None, ge=1_048_576, le=104_857_600)
+    trace_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    completed_job_retention_days: int | None = Field(default=None, ge=1, le=3650)
 
 
 class EmbeddingReindexRequest(BaseModel):
