@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {auditQuery, canCancelJob, canRetryJob, embeddingCompatibility, settingValue, traceStatus} from "./pages";
+import {auditQuery, canCancelJob, canRetryJob, embeddingCompatibility, rerankerStatusLabel, settingValue, traceStatus} from "./pages";
 
 describe("settingValue", () => {
   it("parses boolean controls", () => {
@@ -41,5 +41,13 @@ describe("embeddingCompatibility", () => {
     const profile = {status:"ready",model:"BAAI/bge-m3",device:"cpu",dimension:1024,expected_dimension:1024,compatible:true};
     expect(embeddingCompatibility(profile)).toBe("Compatible");
     expect(embeddingCompatibility({...profile,compatible:false})).toBe("Incompatible");
+  });
+});
+
+describe("rerankerStatusLabel", () => {
+  it("surfaces healthy and degraded service states", () => {
+    expect(rerankerStatusLabel("up")).toBe("Available");
+    expect(rerankerStatusLabel("disabled")).toBe("Disabled");
+    expect(rerankerStatusLabel("unavailable")).toBe("Unavailable");
   });
 });

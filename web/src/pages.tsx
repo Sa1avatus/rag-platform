@@ -298,4 +298,49 @@ export function Models() {
     </article></>}
   </>;
 }
+
+type RerankerState = {
+  status: "up" | "disabled" | "unavailable";
+  latency_ms?: number;
+  model?: string;
+  version?: string;
+  device?: string;
+  error?: string;
+  result_count?: number;
+};
+
+export const rerankerStatusLabel = (status: RerankerState["status"]) =>
+  status === "up" ? "Available" : status === "disabled" ? "Disabled" : "Unavailable";
+
+export function Reranker() {
+  const query = useQuery({
+    queryKey: ["reranker-status"],
+    queryFn: () => api<RerankerState>("/v1/admin/reranker/status"),
+    refetchInterval: 10000,
+  });
+  const test = useMutation({
+    mutationFn: () => api<RerankerState>("/v1/admin/reranker/test", {method: "POST"}),
+  });
+  const state = test.data ?? query.data;
+
+  return <>
+    <header><div><h1>Reranker</h1><p className="lede">Connectivity and runtime identity without exposing service credentials.</p></div>
+      <button className="quiet" disabled={test.isPending} onClick={() => test.mutate()}>Test connection</button>
+    </header>
+    {query.isLoading && <Loading/>}{query.error && <p role="alert">{query.error.message}</p>}
+    {test.error && <p role="alert">{test.error.message}</p>}
+    {state && <>
+      {state.status !== "up" && <p className="degraded" role="status">Reranking is {state.status}. Retrieval remains available through the configured fallback.</p>}
+      <section className="cards model-cards">
+        <article><span>Status</span><strong className={state.status === "up" ? "healthy" : "unhealthy"}>{rerankerStatusLabel(state.status)}</strong></article>
+        <article><span>Model</span><strong>{state.model ?? "Not reported"}</strong>{state.version && <small>Version {state.version}</small>}</article>
+        <article><span>Device</span><strong>{state.device ?? "Not reported"}</strong></article>
+        <article><span>Latency</span><strong>{state.latency_ms == null ? "—" : `${state.latency_ms} ms`}</strong></article>
+      </section>
+      {test.data && <article className="test-result"><div><span>Connection test</span><h2>{rerankerStatusLabel(test.data.status)}</h2></div>
+        <p>{test.data.status === "up" ? `Returned ${test.data.result_count ?? 0} ranked results.` : `Safe error: ${test.data.error ?? test.data.status}.`}</p>
+      </article>}
+    </>}
+  </>;
+}
 export function Placeholder({title}:{title:string}){return <><h1>{title}</h1><div className="empty">No records match the current filters.</div></>}
