@@ -29,6 +29,7 @@ from rag_platform.db.models import (
 from rag_platform.db.session import get_session
 from rag_platform.services.health import system_health
 from rag_platform.services.reconciliation import reconcile, reindex_collection
+from rag_platform.services.reranker import reranker_status, test_reranker_connection
 from rag_platform.services.retrieval import search
 
 router = APIRouter(
@@ -357,6 +358,16 @@ async def settings() -> dict[str, object]:
         "default_fusion_top_k": 20,
         "reranker_enabled": True,
     }
+
+
+@router.get("/reranker/status")
+async def reranker() -> dict[str, object]:
+    return await reranker_status()
+
+
+@router.post("/reranker/test")
+async def test_reranker() -> dict[str, object]:
+    return await test_reranker_connection()
 
 
 @router.post("/retrieval/search")

@@ -360,3 +360,17 @@ async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) ->
 
     monkeypatch.setattr(admin, "system_health", system_health)
     assert (await admin.health())["status"] == "operational"
+
+
+@pytest.mark.asyncio
+async def test_reranker_admin_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def status() -> dict[str, object]:
+        return {"status": "up", "model": "cross-encoder"}
+
+    async def test_connection() -> dict[str, object]:
+        return {"status": "up", "result_count": 1}
+
+    monkeypatch.setattr(admin, "reranker_status", status)
+    monkeypatch.setattr(admin, "test_reranker_connection", test_connection)
+    assert (await admin.reranker())["model"] == "cross-encoder"
+    assert (await admin.test_reranker())["result_count"] == 1
