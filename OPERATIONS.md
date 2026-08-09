@@ -18,6 +18,12 @@ For a deployment check, verify `docker compose ps`, open the System Health page,
 e2e` from `web/`. The E2E suite expects the UI at `http://127.0.0.1:8300` and uses the public local
 development token from `.env.example`; do not reuse that token in a deployed environment.
 
+`docker compose up -d` runs the one-shot `rag-migrate` service before API and worker startup. The
+service applies `alembic upgrade head` and must exit successfully; Compose blocks dependent
+services if migration fails. `docker compose ps --all` shows the completed migration container as
+`Exited (0)`. API, worker, web, PostgreSQL, Redis, OpenSearch, and MinIO expose container
+healthchecks.
+
 Use `make up`, `make migrate`, `make test`, `make lint`, and `make down`. Back up PostgreSQL with
 `pg_dump --format=custom` and MinIO with versioned object replication. Restore PostgreSQL and MinIO
 before replaying the PostgreSQL-authoritative chunks into a fresh versioned OpenSearch index; switch

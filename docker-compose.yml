@@ -1,5 +1,14 @@
 name: rag-platform
 services:
+  rag-migrate:
+    build:
+      context: .
+      target: api
+    command: alembic upgrade head
+    env_file: .env
+    depends_on:
+      rag-postgres: {condition: service_healthy}
+    restart: "no"
   rag-api:
     build:
       context: .
@@ -8,6 +17,7 @@ services:
     env_file: .env
     ports: ["127.0.0.1:8100:8100"]
     depends_on:
+      rag-migrate: {condition: service_completed_successfully}
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
     healthcheck: {test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8100/health/live')"], interval: 10s, timeout: 3s, retries: 10}
@@ -20,17 +30,29 @@ services:
     command: celery -A rag_platform.worker.celery_app worker --beat --schedule=/tmp/celerybeat-schedule --queues=indexing,search --loglevel=INFO --concurrency=1
     env_file: .env
     depends_on:
+      rag-migrate: {condition: service_completed_successfully}
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
       rag-minio: {condition: service_healthy}
     volumes: ["rag_model_cache:/home/rag/.cache/huggingface"]
     restart: unless-stopped
     stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A rag_platform.worker.celery_app inspect ping --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     deploy: {resources: {limits: {memory: 6G}}}
   rag-web:
     build: ./web
     ports: ["127.0.0.1:8300:8080"]
     depends_on: [rag-api]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
     deploy: {resources: {limits: {memory: 256M}}}
   rag-postgres:

@@ -6,6 +6,8 @@ COPY pyproject.toml README.md ./
 
 FROM base AS api
 RUN mkdir -p src/rag_platform && touch src/rag_platform/__init__.py && pip install .
+COPY alembic.ini ./
+COPY alembic ./alembic
 COPY src ./src
 RUN pip install --no-deps .
 USER rag
