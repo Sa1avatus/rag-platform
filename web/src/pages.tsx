@@ -78,6 +78,53 @@ export function Documents() {
     </div>}
   </>;
 }
+
+type EvaluationDatasetItem = {id:string; tenant_id:string; project_id:string; name:string; version:number; collections:string[]; case_count:number};
+type EvaluationRunItem = {id:string; tenant_id:string; project_id:string; dataset_id:string; status:string; configuration:Record<string,unknown>; results?:Array<Record<string,unknown>>};
+
+export const evaluationScope = (tenantId:string, projectId:string) =>
+  new URLSearchParams({tenant_id:tenantId, project_id:projectId}).toString();
+
+export function Evaluation() {
+  const client = useQueryClient();
+  const [params,setParams] = useSearchParams();
+  const projectId = params.get("project_id") ?? "";
+  const runId = params.get("run") ?? "";
+  const projects = useQuery({queryKey:["projects"],queryFn:()=>api<ProjectOption[]>("/v1/admin/projects")});
+  const project = projects.data?.find(item=>item.id===projectId);
+  const scope = project ? evaluationScope(project.tenant_id,project.id) : "";
+  const datasets = useQuery({queryKey:["evaluation-datasets",scope],queryFn:()=>api<EvaluationDatasetItem[]>(`/v1/admin/evaluation/datasets?${scope}`),enabled:Boolean(scope)});
+  const runs = useQuery({queryKey:["evaluation-runs",scope],queryFn:()=>api<EvaluationRunItem[]>(`/v1/admin/evaluation/runs?${scope}`),enabled:Boolean(scope),refetchInterval:10000});
+  const detail = useQuery({queryKey:["evaluation-run",runId,scope],queryFn:()=>api<EvaluationRunItem>(`/v1/admin/evaluation/runs/${runId}?${scope}`),enabled:Boolean(runId&&scope)});
+  const start = useMutation({
+    mutationFn:(datasetId:string)=>api(`/v1/admin/evaluation/runs?${scope}`,{method:"POST",body:JSON.stringify({dataset_id:datasetId})}),
+    onSuccess:()=>client.invalidateQueries({queryKey:["evaluation-runs"]}),
+  });
+  async function run(dataset:EvaluationDatasetItem) {
+    if (!window.confirm(`Run evaluation dataset ${dataset.name} v${dataset.version}?`)) return;
+    await start.mutateAsync(dataset.id);
+  }
+  function chooseProject(value:string) {setParams(value?{project_id:value}:{})}
+
+  return <>
+    <header><div><h1>Evaluation</h1><p className="lede">Versioned datasets, controlled runs, and retrieval quality metrics.</p></div>
+      <label>Project<select value={projectId} onChange={event=>chooseProject(event.target.value)}><option value="">Select a project</option>{projects.data?.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+    </header>
+    {!projectId&&<div className="empty">Select a project to inspect evaluation datasets and runs.</div>}
+    {(datasets.isLoading||runs.isLoading)&&<Loading/>}{(datasets.error||runs.error||detail.error||start.error)&&<p role="alert">{(datasets.error??runs.error??detail.error??start.error)?.message}</p>}
+    {projectId&&<div className="evaluation-grid"><section><h2>Datasets</h2>{datasets.data?.length===0&&<div className="empty">No evaluation datasets.</div>}{datasets.data?.map(dataset=><article className="evaluation-item" key={dataset.id}>
+      <div><h3>{dataset.name} <span className="badge">v{dataset.version}</span></h3><small>{dataset.collections.join(", ")} · {dataset.case_count} cases</small></div>
+      <button disabled={start.isPending} onClick={()=>run(dataset)}>Run evaluation</button>
+    </article>)}</section><section><h2>Runs</h2>{runs.data?.length===0&&<div className="empty">No evaluation runs.</div>}{runs.data?.map(item=><article className="evaluation-item" key={item.id}>
+      <div><span className={`badge status-${item.status}`}>{item.status}</span><small className="resource-id">{item.id}</small></div>
+      <button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("run",item.id);setParams(next)}}>Results</button>
+    </article>)}</section></div>}
+    {runId&&detail.data&&<aside className="result-panel"><div className="setting-heading"><div><h2>Run results</h2><small className="mono">{detail.data.id}</small></div><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.delete("run");setParams(next)}}>Close</button></div>
+      <dl><dt>Status</dt><dd>{detail.data.status}</dd><dt>Dataset</dt><dd className="mono">{detail.data.dataset_id}</dd><dt>Result cases</dt><dd>{detail.data.results?.length??0}</dd></dl>
+      <pre>{JSON.stringify(detail.data.results??[],null,2)}</pre>
+    </aside>}
+  </>;
+}
 export function SearchPlayground(){const [result,setResult]=useState<any>();async function run(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setResult(await api("/v1/admin/retrieval/search",{method:"POST",body:JSON.stringify({project_id:f.get("project_id"),collections:String(f.get("collections")).split(","),query:f.get("query"),include_trace:true})}))}return <><h1>Search Playground</h1><form onSubmit={run}><input name="project_id" placeholder="Project UUID" required/><input name="collections" placeholder="Collection names" required/><textarea name="query" placeholder="Ask a retrieval question" required/><button>Search</button></form>{result&&<pre>{JSON.stringify(result,null,2)}</pre>}</>}
 export function SystemHealth(){const q=useQuery({queryKey:["health"],queryFn:()=>api<any>("/v1/admin/system/health"),refetchInterval:10000});return <><h1>System Health</h1>{q.isLoading?<Loading/>:<section className="cards">{q.data?.components.map((c:any)=><article key={c.name}><span>{c.name}</span><strong className="healthy">{c.status}</strong></article>)}</section>}</>}
 

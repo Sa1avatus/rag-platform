@@ -12,6 +12,7 @@ from rag_platform.api.schemas import (
     CollectionUpdate,
     ConfigurationComparisonRequest,
     EmbeddingReindexRequest,
+    EvaluationRunCreate,
     ProjectCreate,
     ProjectUpdate,
     RetrievalConfiguration,
@@ -20,7 +21,16 @@ from rag_platform.api.schemas import (
     TenantCreate,
 )
 from rag_platform.core.auth import Principal
-from rag_platform.db.models import AuditLog, Chunk, Document, IndexingJob, Project, RetrievalRequest
+from rag_platform.db.models import (
+    AuditLog,
+    Chunk,
+    Document,
+    EvaluationDataset,
+    EvaluationResult,
+    IndexingJob,
+    Project,
+    RetrievalRequest,
+)
 
 
 class ScalarRows:
@@ -135,6 +145,44 @@ async def test_admin_documents_and_chunks_are_explicitly_scoped() -> None:
             "language": "en",
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_admin_evaluation_listing_run_and_results() -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    dataset = EvaluationDataset(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={"name": "baseline", "version": 1, "collections": ["manuals"]},
+    )
+    datasets = await admin.admin_evaluation_datasets(
+        tenant_id, project_id, FakeSession(rows=[dataset])
+    )
+    assert datasets[0]["name"] == "baseline"
+
+    create_session = FakeSession(scalar_values=[dataset])
+    created = await admin.admin_create_evaluation_run(
+        EvaluationRunCreate(dataset_id=dataset.id), tenant_id, project_id, create_session
+    )
+    assert created["status"] == "queued"
+    assert create_session.commits == 1
+    assert create_session.added[1].payload["type"] == "evaluation.run"
+    assert create_session.added[2].payload["action"] == "evaluation.run"
+
+    run = create_session.added[0]
+    runs = await admin.admin_evaluation_runs(tenant_id, project_id, FakeSession(rows=[run]))
+    assert runs[0]["dataset_id"] == str(dataset.id)
+    result = EvaluationResult(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={"run_id": str(run.id), "recall_at_5": 1.0},
+    )
+    detail = await admin.admin_evaluation_run(
+        run.id, tenant_id, project_id, FakeSession(scalar_values=[run], rows=[result])
+    )
+    assert detail["results"][0]["recall_at_5"] == 1.0  # type: ignore[index]
 
 
 @pytest.mark.asyncio

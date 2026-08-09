@@ -12,6 +12,7 @@ from rag_platform.api.schemas import (
     CollectionUpdate,
     ConfigurationComparisonRequest,
     EmbeddingReindexRequest,
+    EvaluationRunCreate,
     ProjectCreate,
     ProjectUpdate,
     RuntimeSettingsUpdate,
@@ -25,6 +26,9 @@ from rag_platform.db.models import (
     Chunk,
     Collection,
     Document,
+    EvaluationDataset,
+    EvaluationResult,
+    EvaluationRun,
     IndexingJob,
     OutboxEvent,
     Project,
@@ -213,6 +217,138 @@ async def admin_document_chunks(
         }
         for row in rows
     ]
+
+
+@router.get("/evaluation/datasets")
+async def admin_evaluation_datasets(
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    rows = (
+        await session.scalars(
+            select(EvaluationDataset)
+            .where(
+                EvaluationDataset.tenant_id == tenant_id,
+                EvaluationDataset.project_id == project_id,
+            )
+            .order_by(EvaluationDataset.created_at.desc())
+        )
+    ).all()
+    return [
+        {
+            "id": row.id,
+            "tenant_id": row.tenant_id,
+            "project_id": row.project_id,
+            **row.payload,
+        }
+        for row in rows
+    ]
+
+
+@router.get("/evaluation/runs")
+async def admin_evaluation_runs(
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    rows = (
+        await session.scalars(
+            select(EvaluationRun)
+            .where(
+                EvaluationRun.tenant_id == tenant_id,
+                EvaluationRun.project_id == project_id,
+            )
+            .order_by(EvaluationRun.created_at.desc())
+        )
+    ).all()
+    return [
+        {
+            "id": row.id,
+            "tenant_id": row.tenant_id,
+            "project_id": row.project_id,
+            **row.payload,
+        }
+        for row in rows
+    ]
+
+
+@router.get("/evaluation/runs/{run_id}")
+async def admin_evaluation_run(
+    run_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    run = await session.scalar(
+        select(EvaluationRun).where(
+            EvaluationRun.id == run_id,
+            EvaluationRun.tenant_id == tenant_id,
+            EvaluationRun.project_id == project_id,
+        )
+    )
+    if run is None:
+        raise HTTPException(404, "evaluation run not found")
+    results = (
+        await session.scalars(
+            select(EvaluationResult).where(
+                EvaluationResult.tenant_id == tenant_id,
+                EvaluationResult.project_id == project_id,
+                EvaluationResult.payload["run_id"].astext == str(run.id),
+            )
+        )
+    ).all()
+    return {
+        "id": run.id,
+        **run.payload,
+        "results": [{"id": row.id, **row.payload} for row in results],
+    }
+
+
+@router.post("/evaluation/runs", status_code=202)
+async def admin_create_evaluation_run(
+    data: EvaluationRunCreate,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    dataset = await session.scalar(
+        select(EvaluationDataset).where(
+            EvaluationDataset.id == data.dataset_id,
+            EvaluationDataset.tenant_id == tenant_id,
+            EvaluationDataset.project_id == project_id,
+        )
+    )
+    if dataset is None:
+        raise HTTPException(404, "evaluation dataset not found")
+    run = EvaluationRun(
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={
+            "dataset_id": str(dataset.id),
+            "status": "queued",
+            "configuration": data.model_dump(exclude={"dataset_id"}),
+        },
+    )
+    session.add(run)
+    await session.flush()
+    session.add(
+        OutboxEvent(
+            tenant_id=tenant_id,
+            project_id=project_id,
+            payload={"type": "evaluation.run", "run_id": str(run.id), "attempts": 0},
+        )
+    )
+    _audit(
+        session,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        action="evaluation.run",
+        resource_type="evaluation_run",
+        resource_id=run.id,
+    )
+    await session.commit()
+    return {"id": run.id, "status": "queued"}
 
 
 @router.get("/projects/{project_id}")

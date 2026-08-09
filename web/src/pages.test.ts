@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {auditQuery, canCancelJob, canRetryJob, documentQuery, embeddingCompatibility, rerankerStatusLabel, settingValue, traceStatus} from "./pages";
+import {auditQuery, canCancelJob, canRetryJob, documentQuery, embeddingCompatibility, evaluationScope, rerankerStatusLabel, settingValue, traceStatus} from "./pages";
 
 describe("settingValue", () => {
   it("parses boolean controls", () => {
@@ -56,5 +56,11 @@ describe("documentQuery", () => {
   it("keeps the required project scope and optional collection", () => {
     expect(documentQuery("tenant-id", "project-id", "knowledge")).toBe("tenant_id=tenant-id&project_id=project-id&limit=100&collection=knowledge");
     expect(documentQuery("tenant-id", "project-id", "")).toBe("tenant_id=tenant-id&project_id=project-id&limit=100");
+  });
+});
+
+describe("evaluationScope", () => {
+  it("requires both tenant and project", () => {
+    expect(evaluationScope("tenant-id","project-id")).toBe("tenant_id=tenant-id&project_id=project-id");
   });
 });
