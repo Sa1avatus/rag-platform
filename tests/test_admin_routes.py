@@ -362,6 +362,13 @@ async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(admin, "system_health", system_health)
     assert (await admin.health())["status"] == "operational"
 
+    monkeypatch.setattr(
+        admin,
+        "system_resources",
+        lambda: {"scope": "rag-api-container", "cpu": {"count": 2}},
+    )
+    assert (await admin.resources())["scope"] == "rag-api-container"
+
 
 @pytest.mark.asyncio
 async def test_reranker_admin_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:

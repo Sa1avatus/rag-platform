@@ -38,6 +38,8 @@ sends one inert test query and reports latency/result count; external failures a
 heartbeat and verify model name/dimension compatibility without loading the model in the API.
 `POST /v1/admin/models/embeddings/reindex` requires `{"confirm": true}`, refuses incompatible model
 profiles, and requeues all current, non-deleted versions while preserving active jobs.
+`GET /v1/admin/system/resources` reports CPU load, memory, disk, and GPU detection for the `rag-api`
+container only. It never executes shell commands or exposes host/Docker control interfaces.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns

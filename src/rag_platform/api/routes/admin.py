@@ -32,6 +32,7 @@ from rag_platform.services.embedding_admin import embedding_profile
 from rag_platform.services.health import system_health
 from rag_platform.services.reconciliation import reconcile, reindex_collection, reindex_embeddings
 from rag_platform.services.reranker import reranker_status, test_reranker_connection
+from rag_platform.services.resources import system_resources
 from rag_platform.services.retrieval import search
 
 router = APIRouter(
@@ -350,6 +351,11 @@ async def dashboard(
 @router.get("/system/health")
 async def health() -> dict[str, object]:
     return await system_health()
+
+
+@router.get("/system/resources")
+async def resources() -> dict[str, object]:
+    return system_resources()
 
 
 @router.get("/settings")
