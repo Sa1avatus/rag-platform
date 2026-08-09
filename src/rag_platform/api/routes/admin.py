@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -30,6 +31,7 @@ from rag_platform.db.models import (
     Tenant,
 )
 from rag_platform.db.session import get_session
+from rag_platform.services.admin_metrics import metric_timeseries
 from rag_platform.services.embedding_admin import embedding_profile
 from rag_platform.services.health import system_health
 from rag_platform.services.reconciliation import reconcile, reindex_collection, reindex_embeddings
@@ -532,6 +534,44 @@ async def dashboard(
     documents = await session.scalar(select(func.count()).select_from(Document)) or 0
     chunks = await session.scalar(select(func.count()).select_from(Chunk)) or 0
     return {"documents": documents, "chunks": chunks, "embeddings": chunks}
+
+
+@router.get("/metrics/timeseries")
+async def metrics_timeseries(
+    metric: str = Query(
+        pattern="^(documents|retrieval_requests|feedback|audit_events|indexing_jobs|indexing_errors)$"
+    ),
+    project_id: uuid.UUID | None = None,
+    collection: str | None = Query(default=None, min_length=1, max_length=100),
+    from_: datetime | None = Query(default=None, alias="from"),
+    to: datetime | None = None,
+    step: str = Query(default="hour", pattern="^(hour|day)$"),
+    aggregation: str = Query(default="count", pattern="^count$"),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    end = to or datetime.now(UTC)
+    start = from_ or end - timedelta(days=1)
+    if start >= end:
+        raise HTTPException(422, "from must be earlier than to")
+    if end - start > timedelta(days=90):
+        raise HTTPException(422, "time range cannot exceed 90 days")
+    points = await metric_timeseries(
+        session,
+        metric,
+        project_id=project_id,
+        collection=collection,
+        start=start,
+        end=end,
+        step=step,
+    )
+    return {
+        "metric": metric,
+        "aggregation": aggregation,
+        "step": step,
+        "from": start,
+        "to": end,
+        "points": points,
+    }
 
 
 @router.get("/audit-log")

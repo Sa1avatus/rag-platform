@@ -45,6 +45,8 @@ heartbeat and verify model name/dimension compatibility without loading the mode
 profiles, and requeues all current, non-deleted versions while preserving active jobs.
 `GET /v1/admin/system/resources` reports CPU load, memory, disk, and GPU detection for the `rag-api`
 container only. It never executes shell commands or exposes host/Docker control interfaces.
+`GET /v1/admin/metrics/timeseries` aggregates allowlisted PostgreSQL event metrics into hourly or
+daily count buckets over a maximum 90-day range, with optional project and collection filters.
 `GET /v1/admin/audit-log` lists newest administrative mutations and can filter by action, tenant,
 or project. Audit payloads contain resource identifiers only; service-key secrets and hashes are
 never recorded.

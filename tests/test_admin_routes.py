@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -496,6 +497,52 @@ async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) ->
         lambda: {"scope": "rag-api-container", "cpu": {"count": 2}},
     )
     assert (await admin.resources())["scope"] == "rag-api-container"
+
+
+@pytest.mark.asyncio
+async def test_metrics_timeseries_validates_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = datetime.now(UTC)
+
+    async def metric_timeseries(*args: object, **kwargs: object) -> list[dict[str, object]]:
+        return [{"timestamp": now, "value": 4}]
+
+    monkeypatch.setattr(admin, "metric_timeseries", metric_timeseries)
+    response = await admin.metrics_timeseries(
+        metric="documents",
+        project_id=None,
+        collection="manuals",
+        from_=now - timedelta(hours=1),
+        to=now,
+        step="hour",
+        aggregation="count",
+        session=FakeSession(),
+    )
+    assert response["points"] == [{"timestamp": now, "value": 4}]
+
+    with pytest.raises(HTTPException) as error:
+        await admin.metrics_timeseries(
+            metric="documents",
+            project_id=None,
+            collection=None,
+            from_=now,
+            to=now,
+            step="hour",
+            aggregation="count",
+            session=FakeSession(),
+        )
+    assert error.value.status_code == 422
+
+    with pytest.raises(HTTPException, match="90 days"):
+        await admin.metrics_timeseries(
+            metric="documents",
+            project_id=None,
+            collection=None,
+            from_=now - timedelta(days=91),
+            to=now,
+            step="day",
+            aggregation="count",
+            session=FakeSession(),
+        )
 
 
 @pytest.mark.asyncio
