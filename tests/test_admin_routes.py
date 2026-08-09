@@ -9,6 +9,7 @@ from rag_platform.api.schemas import (
     ApiKeyCreate,
     CollectionCreate,
     CollectionUpdate,
+    EmbeddingReindexRequest,
     ProjectCreate,
     ProjectUpdate,
     SearchRequest,
@@ -389,3 +390,40 @@ async def test_embedding_admin_endpoints(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(admin, "embedding_profile", profile)
     assert (await admin.embeddings())["compatible"] is True
     assert (await admin.check_embeddings())["dimension"] == 1024
+
+
+@pytest.mark.asyncio
+async def test_embedding_reindex_requires_confirmation_and_compatibility(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(HTTPException) as confirmation:
+        await admin.reindex_embedding_model(
+            EmbeddingReindexRequest(confirm=False),
+            FakeSession(),
+        )
+    assert confirmation.value.status_code == 409
+
+    async def incompatible() -> dict[str, object]:
+        return {"compatible": False}
+
+    monkeypatch.setattr(admin, "embedding_profile", incompatible)
+    with pytest.raises(HTTPException) as compatibility:
+        await admin.reindex_embedding_model(
+            EmbeddingReindexRequest(confirm=True),
+            FakeSession(),
+        )
+    assert compatibility.value.status_code == 409
+
+    async def compatible() -> dict[str, object]:
+        return {"compatible": True}
+
+    async def reindex(session: object) -> dict[str, int]:
+        return {"requeued": 5, "skipped_active": 2}
+
+    monkeypatch.setattr(admin, "embedding_profile", compatible)
+    monkeypatch.setattr(admin, "reindex_embeddings", reindex)
+    result = await admin.reindex_embedding_model(
+        EmbeddingReindexRequest(confirm=True),
+        FakeSession(),
+    )
+    assert result == {"requeued": 5, "skipped_active": 2}

@@ -95,3 +95,24 @@ async def test_collection_reindex_skips_active_versions(monkeypatch: pytest.Monk
     assert calls == [inactive.id]
     assert inactive.status == Status.queued
     assert session.committed is True
+
+
+@pytest.mark.asyncio
+async def test_embedding_reindex_covers_all_current_versions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    active = DocumentVersion(id=uuid.uuid4(), status=Status.processing, is_current=True)
+    inactive = DocumentVersion(id=uuid.uuid4(), status=Status.indexed, is_current=True)
+    jobs = [IndexingJob(payload={"status": "queued", "version_id": str(active.id)})]
+    calls: list[uuid.UUID] = []
+
+    async def enqueue(session: object, value: DocumentVersion) -> Any:
+        calls.append(value.id)
+
+    monkeypatch.setattr(reconciliation, "enqueue_indexing", enqueue)
+    session = FakeSession([jobs, [active, inactive]])
+    result = await reconciliation.reindex_embeddings(session)
+
+    assert result == {"requeued": 1, "skipped_active": 1}
+    assert calls == [inactive.id]
+    assert inactive.status == Status.queued

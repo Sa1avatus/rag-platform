@@ -36,6 +36,8 @@ sends one inert test query and reports latency/result count; external failures a
 `unavailable` rather than failing the admin API.
 `GET /v1/admin/models/embeddings` and `POST /v1/admin/models/embeddings/check` report the worker
 heartbeat and verify model name/dimension compatibility without loading the model in the API.
+`POST /v1/admin/models/embeddings/reindex` requires `{"confirm": true}`, refuses incompatible model
+profiles, and requeues all current, non-deleted versions while preserving active jobs.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
 restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns

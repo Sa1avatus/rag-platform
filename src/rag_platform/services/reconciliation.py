@@ -97,3 +97,27 @@ async def reindex_collection(
         requeued += 1
     await session.commit()
     return {"requeued": requeued, "skipped_active": skipped_active}
+
+
+async def reindex_embeddings(session: AsyncSession) -> dict[str, int]:
+    jobs = (await session.scalars(select(IndexingJob))).all()
+    active_version_ids, _ = active_targets([job.payload for job in jobs])
+    versions = (
+        await session.scalars(
+            select(DocumentVersion).where(
+                DocumentVersion.is_current.is_(True),
+                DocumentVersion.status != Status.deleted,
+            )
+        )
+    ).all()
+    requeued = 0
+    skipped_active = 0
+    for version in versions:
+        if version.id in active_version_ids:
+            skipped_active += 1
+            continue
+        version.status = Status.queued
+        await enqueue_indexing(session, version)
+        requeued += 1
+    await session.commit()
+    return {"requeued": requeued, "skipped_active": skipped_active}

@@ -109,6 +109,10 @@ class CollectionUpdate(BaseModel):
     settings: dict[str, Any] | None = None
 
 
+class EmbeddingReindexRequest(BaseModel):
+    confirm: bool
+
+
 class ContextResponse(BaseModel):
     request_id: uuid.UUID
     sources: list[dict[str, Any]]

@@ -9,6 +9,7 @@ from rag_platform.api.schemas import (
     ApiKeyCreate,
     CollectionCreate,
     CollectionUpdate,
+    EmbeddingReindexRequest,
     ProjectCreate,
     ProjectUpdate,
     SearchRequest,
@@ -29,7 +30,7 @@ from rag_platform.db.models import (
 from rag_platform.db.session import get_session
 from rag_platform.services.embedding_admin import embedding_profile
 from rag_platform.services.health import system_health
-from rag_platform.services.reconciliation import reconcile, reindex_collection
+from rag_platform.services.reconciliation import reconcile, reindex_collection, reindex_embeddings
 from rag_platform.services.reranker import reranker_status, test_reranker_connection
 from rag_platform.services.retrieval import search
 
@@ -379,6 +380,19 @@ async def embeddings() -> dict[str, object]:
 @router.post("/models/embeddings/check")
 async def check_embeddings() -> dict[str, object]:
     return await embedding_profile()
+
+
+@router.post("/models/embeddings/reindex", status_code=202)
+async def reindex_embedding_model(
+    data: EmbeddingReindexRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, int]:
+    if not data.confirm:
+        raise HTTPException(409, "explicit confirmation is required")
+    profile = await embedding_profile()
+    if profile.get("compatible") is not True:
+        raise HTTPException(409, "embedding model is not compatible")
+    return await reindex_embeddings(session)
 
 
 @router.post("/retrieval/search")
