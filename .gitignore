@@ -10,4 +10,7 @@ coverage.xml
 web/node_modules/
 web/dist/
 web/*.tsbuildinfo
+web/debug.log
+web/playwright-report/
+web/test-results/
 *.pyc

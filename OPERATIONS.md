@@ -1,5 +1,23 @@
 # Operations
 
+## Admin UI
+
+Open `http://127.0.0.1:8300` and authenticate with the configured admin token. The token is retained
+only in browser session storage and is cleared by **Log out**. Secrets and infrastructure
+credentials are not displayed by the UI.
+
+Filters for audit events, indexing jobs, documents, evaluation runs, and feedback are represented
+in the URL where applicable, so a scoped view can be bookmarked. Reindex, retry, cancel, repeat,
+and evaluation-run actions require explicit confirmation or are limited to safe backend states.
+
+The reranker is an optional external dependency. An unavailable reranker is shown as degraded and
+does not make retrieval unavailable. Use **Test connection** on the Reranker page to validate the
+configured backend connection without revealing its URL or credentials.
+
+For a deployment check, verify `docker compose ps`, open the System Health page, then run `pnpm
+e2e` from `web/`. The E2E suite expects the UI at `http://127.0.0.1:8300` and uses the public local
+development token from `.env.example`; do not reuse that token in a deployed environment.
+
 Use `make up`, `make migrate`, `make test`, `make lint`, and `make down`. Back up PostgreSQL with
 `pg_dump --format=custom` and MinIO with versioned object replication. Restore PostgreSQL and MinIO
 before replaying the PostgreSQL-authoritative chunks into a fresh versioned OpenSearch index; switch

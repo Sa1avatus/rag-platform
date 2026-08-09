@@ -12,6 +12,21 @@ client-specific business logic and answer generation remain outside this reposit
 4. Open the API at `http://127.0.0.1:8100/docs` and admin UI at
    `http://127.0.0.1:8300`.
 
+The admin UI uses the local admin token configured for the API. For the checked-in development
+configuration, use the non-secret example token `local-rag-admin-token`. The UI exposes scoped
+project, document, retrieval, evaluation, feedback, model, health, settings, and audit views. It
+never connects directly to PostgreSQL, OpenSearch, Redis, or MinIO; nginx proxies `/api/*` to
+`rag-api` on the internal Compose network.
+
+Run frontend verification while the Compose stack is healthy:
+
+```powershell
+cd web
+pnpm test
+pnpm build
+pnpm e2e
+```
+
 The API container never imports the embedding module. The worker loads `BAAI/bge-m3` once per
 process. Reranking is an optional external HTTP dependency and is deliberately absent from Compose.
 
