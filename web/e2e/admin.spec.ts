@@ -11,10 +11,13 @@ async function signIn(page: Page) {
 
 test("admin authentication survives navigation", async ({page}) => {
   await signIn(page);
+  await page.getByRole("button", {name: "Use light theme"}).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("link", {name: "Settings"}).click();
   await expect(page.getByRole("heading", {name: "Settings", level: 1})).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", {name: "Settings", level: 1})).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });
 
 test("every administrative section has a real route", async ({page}) => {
