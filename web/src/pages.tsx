@@ -510,4 +510,3 @@ export function Reranker() {
     </>}
   </>;
 }
-export function Placeholder({title}:{title:string}){return <><h1>{title}</h1><div className="empty">No records match the current filters.</div></>}
