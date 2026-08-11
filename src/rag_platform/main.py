@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST
 
@@ -14,6 +14,29 @@ app.include_router(retrieval.router)
 app.include_router(feedback.router)
 app.include_router(evaluations.router)
 app.include_router(admin.router)
+
+
+@app.on_event("startup")
+async def _cleanup_prometheus_multiprocess() -> None:
+    """Remove stale metric files from dead processes at startup."""
+    import os
+
+    mp_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    if not mp_dir or not os.path.isdir(mp_dir):  # noqa: ASYNC240
+        return
+    from prometheus_client.multiprocess import mark_process_dead
+
+    for name in os.listdir(mp_dir):
+        if not name.endswith(".db"):
+            continue
+        try:
+            pid = int(name.split("_", 1)[0])
+        except (ValueError, IndexError):
+            continue
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            mark_process_dead(pid)  # type: ignore[no-untyped-call]
 
 
 @app.exception_handler(QueryEmbeddingUnavailable)
@@ -52,6 +75,6 @@ async def metrics() -> Response:
 
     if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
         registry = CollectorRegistry()
-        multiprocess.MultiProcessCollector(registry)
+        multiprocess.MultiProcessCollector(registry)  # type: ignore[no-untyped-call]
         return Response(generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

@@ -23,6 +23,7 @@ services:
       rag-migrate: {condition: service_completed_successfully}
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
+    volumes: ["rag_prometheus:/tmp/prometheus-multiproc"]
     healthcheck: {test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8100/health/live')"], interval: 10s, timeout: 3s, retries: 10}
     restart: unless-stopped
     deploy: {resources: {limits: {memory: 1G}}}
