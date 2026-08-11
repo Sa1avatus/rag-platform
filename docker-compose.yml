@@ -1,4 +1,4 @@
-name: rag-platform
+﻿name: rag-platform
 services:
   rag-migrate:
     build:
@@ -13,8 +13,11 @@ services:
     build:
       context: .
       target: api
-    command: uvicorn rag_platform.main:app --host 0.0.0.0 --port 8100
+    command: >-
+      sh -c "mkdir -p /tmp/prometheus-multiproc && uvicorn rag_platform.main:app --host 0.0.0.0 --port 8100"
     env_file: .env
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus-multiproc
     ports: ["127.0.0.1:8100:8100"]
     depends_on:
       rag-migrate: {condition: service_completed_successfully}
@@ -34,7 +37,9 @@ services:
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
       rag-minio: {condition: service_healthy}
-    volumes: ["rag_model_cache:/home/rag/.cache/huggingface"]
+    volumes: ["rag_model_cache:/home/rag/.cache/huggingface", "rag_prometheus:/tmp/prometheus-multiproc"]
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus-multiproc
     restart: unless-stopped
     stop_grace_period: 60s
     healthcheck:
@@ -88,4 +93,4 @@ services:
     volumes: ["rag_minio:/data"]
     healthcheck: {test: ["CMD", "mc", "ready", "local"], interval: 5s, timeout: 3s, retries: 20}
     restart: unless-stopped
-volumes: {rag_postgres: {}, rag_opensearch: {}, rag_redis: {}, rag_minio: {}, rag_model_cache: {}}
+volumes: {rag_postgres: {}, rag_opensearch: {}, rag_redis: {}, rag_minio: {}, rag_model_cache: {}, rag_prometheus: {}}

@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST
 
 from rag_platform.api.routes import admin, documents, evaluations, feedback, retrieval
 from rag_platform.core.observability import RequestContextMiddleware
@@ -46,4 +46,12 @@ async def ready() -> JSONResponse:
 
 @app.get("/metrics")
 async def metrics() -> Response:
+    import os
+
+    from prometheus_client import CollectorRegistry, generate_latest, multiprocess
+
+    if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        return Response(generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
