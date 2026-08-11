@@ -217,7 +217,9 @@ async def _search(
                     correlation_id=correlation_id,
                 )
             ranked = [reranker_rows_by_id[item.id] for item in response.results]
-            reranker_scores = {uuid.UUID(item.id): item.score for item in response.results}
+            reranker_scores = {
+                uuid.UUID(item.id): item.ranking_score for item in response.results
+            }
             reranker_metadata = {
                 "model": response.model,
                 "model_revision": response.model_revision,

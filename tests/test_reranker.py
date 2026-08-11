@@ -116,3 +116,41 @@ async def test_reranker_client_rejects_unknown_or_duplicate_ids() -> None:
                 request_id=request_id,
                 correlation_id="correlation",
             )
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_reranker_client_accepts_raw_logits_and_uses_normalized_score() -> None:
+    request_id = uuid.uuid4()
+    respx.post("http://reranker.test/v1/rerank").mock(
+        return_value=Response(
+            200,
+            json={
+                "request_id": str(request_id),
+                "model": "model",
+                "model_revision": "revision",
+                "device": "cuda",
+                "results": [
+                    {"id": "known", "score": 7.5, "normalized_score": 0.95, "rank": 1},
+                ],
+                "usage": {},
+            },
+        )
+    )
+    async with reranker.RerankerClient(
+        base_url="http://reranker.test",
+        api_key=SecretStr("test-reranker-key"),
+        timeout_seconds=1,
+        max_retries=0,
+    ) as client:
+        response = await client.rerank(
+            query="query",
+            documents=[reranker.RerankerDocument("known", "text", {})],
+            top_n=1,
+            request_id=request_id,
+            correlation_id="correlation",
+        )
+
+    assert response.results[0].score == 7.5
+    assert response.results[0].normalized_score == 0.95
+    assert response.results[0].ranking_score == 0.95

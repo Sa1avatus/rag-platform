@@ -1,4 +1,5 @@
 import asyncio
+import math
 import time
 import uuid
 from dataclasses import dataclass
@@ -25,7 +26,12 @@ class RerankerDocument:
 class RerankerResult:
     id: str
     score: float
+    normalized_score: float | None
     rank: int
+
+    @property
+    def ranking_score(self) -> float:
+        return self.normalized_score if self.normalized_score is not None else self.score
 
 
 @dataclass(frozen=True)
@@ -143,19 +149,35 @@ def _parse_response(
             raise ValueError("reranker result is invalid")
         item_id = raw.get("id")
         score = raw.get("score")
+        normalized_score = raw.get("normalized_score")
         rank = raw.get("rank")
         if (
             not isinstance(item_id, str)
             or item_id not in allowed_ids
             or item_id in seen
             or not isinstance(score, int | float)
-            or not 0 <= float(score) <= 1
+            or not math.isfinite(float(score))
+            or (
+                normalized_score is not None
+                and (
+                    not isinstance(normalized_score, int | float)
+                    or not math.isfinite(float(normalized_score))
+                    or not 0 <= float(normalized_score) <= 1
+                )
+            )
             or not isinstance(rank, int)
             or rank < 1
         ):
             raise ValueError("reranker result fields are invalid")
         seen.add(item_id)
-        results.append(RerankerResult(item_id, float(score), rank))
+        results.append(
+            RerankerResult(
+                item_id,
+                float(score),
+                float(normalized_score) if normalized_score is not None else None,
+                rank,
+            )
+        )
     if [item.rank for item in results] != list(range(1, expected_count + 1)):
         raise ValueError("reranker ranks are invalid")
     usage = body.get("usage", {})
