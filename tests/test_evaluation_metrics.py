@@ -1,9 +1,18 @@
+import json
 import unittest
+from pathlib import Path
 
+from rag_platform.api.schemas import EvaluationDatasetCreate
 from rag_platform.services.evaluation_metrics import aggregate_metrics, case_metrics
 
 
 class EvaluationMetricsTests(unittest.TestCase):
+    def test_checked_in_hard_negative_dataset_matches_api_schema(self) -> None:
+        path = Path(__file__).parents[1] / "examples" / "evaluation-hard-negatives.json"
+        dataset = EvaluationDatasetCreate.model_validate(json.loads(path.read_text("utf-8")))
+        self.assertEqual(dataset.cases[0].difficulty, "hard")
+        self.assertIn("opportunity-sous-chef-003", dataset.cases[0].forbidden_results)
+
     def test_perfect_ranking_scores_one_for_primary_metrics(self) -> None:
         metrics = case_metrics(["a", "b"], {"a": 3, "b": 1})
         self.assertEqual(metrics["Recall@3"], 1.0)

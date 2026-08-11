@@ -46,6 +46,18 @@ test("every administrative section has a real route", async ({page}) => {
 });
 
 test("reranker outage is presented as a safe degraded state", async ({page}) => {
+  await page.route("**/api/v1/admin/reranker/status", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {status: "unavailable", error: "ConnectError"},
+    });
+  });
+  await page.route("**/api/v1/admin/reranker/test", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {status: "unavailable", error: "ConnectError"},
+    });
+  });
   await signIn(page);
   await page.goto("/reranker");
   await expect(page.getByRole("heading", {name: "Reranker", level: 1})).toBeVisible();

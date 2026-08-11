@@ -7,6 +7,7 @@ from sqlalchemy import delete, select
 
 from rag_platform.api.schemas import SearchRequest
 from rag_platform.core.auth import Principal
+from rag_platform.core.metrics import EVALUATION_FAILURES, EVALUATION_RUNS
 from rag_platform.db.models import (
     EvaluationCase,
     EvaluationDataset,
@@ -30,6 +31,7 @@ async def evaluate_run(run_id: uuid.UUID) -> None:
             "started_at": datetime.now(UTC).isoformat(),
         }
         await session.commit()
+        EVALUATION_RUNS.inc()
         try:
             await session.execute(
                 delete(EvaluationResult).where(
@@ -58,7 +60,9 @@ async def evaluate_run(run_id: uuid.UUID) -> None:
             configuration = run.payload.get("configuration", {})
             if not isinstance(configuration, dict):
                 raise RuntimeError("evaluation configuration is invalid")
-            case_metric_rows: list[dict[str, float]] = []
+            case_metric_rows_before: list[dict[str, float]] = []
+            case_metric_rows_after: list[dict[str, float]] = []
+            case_metric_deltas: list[dict[str, float]] = []
             latencies: list[float] = []
             forbidden_violations = 0
             for case in cases:
@@ -79,7 +83,13 @@ async def evaluate_run(run_id: uuid.UUID) -> None:
                 )
                 expected_chunks = _string_list(case.payload.get("expected_chunk_ids"))
                 identifier_field = "chunk_id" if expected_chunks else "document_id"
-                retrieved = [str(result[identifier_field]) for result in results]
+                retrieved_after = [str(result[identifier_field]) for result in results]
+                fusion_candidates = trace.get("fusion_candidates", [])
+                retrieved_before = [
+                    str(candidate[identifier_field])
+                    for candidate in fusion_candidates[: request.rerank_top_k]
+                    if isinstance(candidate, dict) and identifier_field in candidate
+                ]
                 expected = expected_chunks or _string_list(
                     case.payload.get("expected_document_ids")
                 )
@@ -87,11 +97,15 @@ async def evaluate_run(run_id: uuid.UUID) -> None:
                     **{item_id: 1 for item_id in expected},
                     **_grade_dict(case.payload.get("relevance_grades")),
                 }
-                metrics = case_metrics(retrieved, grades)
+                metrics_before = case_metrics(retrieved_before, grades)
+                metrics_after = case_metrics(retrieved_after, grades)
+                reranker_delta = _delta_metrics(metrics_before, metrics_after)
                 forbidden = set(_string_list(case.payload.get("forbidden_results")))
-                violations = len(set(retrieved) & forbidden)
+                violations = len(set(retrieved_after) & forbidden)
                 forbidden_violations += violations
-                case_metric_rows.append(metrics)
+                case_metric_rows_before.append(metrics_before)
+                case_metric_rows_after.append(metrics_after)
+                case_metric_deltas.append(reranker_delta)
                 latencies.append(float(trace["latency_ms"]))
                 session.add(
                     EvaluationResult(
@@ -100,28 +114,38 @@ async def evaluate_run(run_id: uuid.UUID) -> None:
                         payload={
                             "run_id": str(run.id),
                             "case_id": str(case.id),
-                            "retrieved_ids": retrieved,
-                            "metrics": metrics,
+                            "retrieved_ids": retrieved_after,
+                            "retrieved_ids_before_reranking": retrieved_before,
+                            "metrics": metrics_after,
+                            "metrics_before_reranking": metrics_before,
+                            "metrics_after_reranking": metrics_after,
+                            "reranker_delta": reranker_delta,
                             "forbidden_violations": violations,
                             "latency_ms": trace["latency_ms"],
                         },
                     )
                 )
-            aggregate = aggregate_metrics(case_metric_rows)
-            aggregate["average_latency_ms"] = _mean(latencies)
-            aggregate["p95_latency_ms"] = _percentile(latencies, 0.95)
-            aggregate["forbidden_violations"] = float(forbidden_violations)
+            aggregate_before = aggregate_metrics(case_metric_rows_before)
+            aggregate_after = aggregate_metrics(case_metric_rows_after)
+            aggregate_delta = aggregate_metrics(case_metric_deltas)
+            aggregate_after["average_latency_ms"] = _mean(latencies)
+            aggregate_after["p95_latency_ms"] = _percentile(latencies, 0.95)
+            aggregate_after["forbidden_violations"] = float(forbidden_violations)
             run = await session.get(EvaluationRun, run_id)
             if run:
                 run.payload = {
                     **run.payload,
                     "status": "completed",
                     "finished_at": datetime.now(UTC).isoformat(),
-                    "metrics": aggregate,
+                    "metrics": aggregate_after,
+                    "metrics_before_reranking": aggregate_before,
+                    "metrics_after_reranking": aggregate_after,
+                    "reranker_uplift": aggregate_delta,
                     "case_count": len(cases),
                 }
             await session.commit()
         except Exception as exc:
+            EVALUATION_FAILURES.inc()
             await session.rollback()
             run = await session.get(EvaluationRun, run_id)
             if run:
@@ -159,3 +183,10 @@ def _percentile(values: list[float], percentile: float) -> float:
     ordered = sorted(values)
     index = max(0, math.ceil(len(ordered) * percentile) - 1)
     return ordered[index]
+
+
+def _delta_metrics(
+    before: dict[str, float],
+    after: dict[str, float],
+) -> dict[str, float]:
+    return {name: after.get(name, 0.0) - before.get(name, 0.0) for name in after}

@@ -21,7 +21,15 @@ async def test_embedding_profile_reports_compatibility(monkeypatch: pytest.Monke
     monkeypatch.setattr(
         embedding_admin,
         "get_settings",
-        lambda: SimpleNamespace(embedding_model="BAAI/bge-m3", embedding_dimension=1024),
+        lambda: SimpleNamespace(
+            embedding_model="BAAI/bge-m3",
+            embedding_dimension=1024,
+            embedding_backend="sentence-transformers",
+            embedding_revision="default",
+            embedding_normalization="l2",
+            chunker_version="word-window-v1",
+            index_version="rag-chunks-v1",
+        ),
     )
     result = await embedding_admin.embedding_profile()
     assert result["status"] == "ready"
@@ -45,7 +53,15 @@ async def test_embedding_profile_reports_incompatibility(monkeypatch: pytest.Mon
     monkeypatch.setattr(
         embedding_admin,
         "get_settings",
-        lambda: SimpleNamespace(embedding_model="BAAI/bge-m3", embedding_dimension=1024),
+        lambda: SimpleNamespace(
+            embedding_model="BAAI/bge-m3",
+            embedding_dimension=1024,
+            embedding_backend="sentence-transformers",
+            embedding_revision="default",
+            embedding_normalization="l2",
+            chunker_version="word-window-v1",
+            index_version="rag-chunks-v1",
+        ),
     )
     result = await embedding_admin.embedding_profile()
     assert result["status"] == "incompatible"

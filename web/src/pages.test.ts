@@ -38,7 +38,7 @@ describe("traceStatus", () => {
 
 describe("embeddingCompatibility", () => {
   it("labels the verified model profile", () => {
-    const profile = {status:"ready",model:"BAAI/bge-m3",device:"cpu",dimension:1024,expected_dimension:1024,compatible:true};
+    const profile = {status:"ready",model:"BAAI/bge-m3",backend:"sentence-transformers",revision:"default",normalization:"l2",device:"cpu",dimension:1024,expected_dimension:1024,chunker_version:"word-window-v1",index_version:"rag-chunks-v1",compatible:true};
     expect(embeddingCompatibility(profile)).toBe("Compatible");
     expect(embeddingCompatibility({...profile,compatible:false})).toBe("Incompatible");
   });

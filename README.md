@@ -30,6 +30,13 @@ pnpm e2e
 The API container never imports the embedding module. The worker loads `BAAI/bge-m3` once per
 process. Reranking is an optional external HTTP dependency and is deliberately absent from Compose.
 
+Search supports explicit `lexical`, `dense`, and RRF-backed `hybrid` modes. Context selection is a
+separate bounded stage with chunk, estimated-token, per-document and near-duplicate controls.
+Document, version and chunk identities are deterministic for new ingestion, while migration `0003`
+adds parser/chunker/embedding/index revisions and chunk provenance needed for safe reindexing.
+Version-aware query-embedding caching is fail-open and isolated to a dedicated Redis namespace.
+Evaluation reports comparable quality before and after reranking, including aggregate uplift.
+
 ## Example
 
 ```bash

@@ -4,6 +4,7 @@ from contextlib import suppress
 from celery.result import AsyncResult
 
 from rag_platform.core.config import get_settings
+from rag_platform.services.cache import get_query_embedding, set_query_embedding
 from rag_platform.worker.celery_app import app
 
 
@@ -12,6 +13,9 @@ class QueryEmbeddingUnavailable(RuntimeError):
 
 
 async def embed_query(query: str) -> list[float]:
+    cached = await get_query_embedding(query)
+    if cached is not None:
+        return cached
     result: AsyncResult = app.send_task(
         "rag_platform.worker.tasks.embed_query",
         args=[query],
@@ -31,4 +35,6 @@ async def embed_query(query: str) -> list[float]:
         result.forget()
     if not isinstance(value, list) or not value:
         raise QueryEmbeddingUnavailable("query embedding worker returned an invalid vector")
-    return [float(component) for component in value]
+    vector = [float(component) for component in value]
+    await set_query_embedding(query, vector)
+    return vector

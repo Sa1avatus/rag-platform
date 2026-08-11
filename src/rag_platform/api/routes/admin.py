@@ -3,15 +3,19 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from prometheus_client import REGISTRY
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.api.schemas import (
     ApiKeyCreate,
+    CacheClearRequest,
     CollectionCreate,
     CollectionUpdate,
     ConfigurationComparisonRequest,
+    DocumentActionRequest,
     EmbeddingReindexRequest,
+    EvaluationRunComparisonRequest,
     EvaluationRunCreate,
     ProjectCreate,
     ProjectUpdate,
@@ -20,12 +24,14 @@ from rag_platform.api.schemas import (
     TenantCreate,
 )
 from rag_platform.core.auth import Principal, admin, hash_key
+from rag_platform.core.config import get_settings
 from rag_platform.db.models import (
     ApiKey,
     AuditLog,
     Chunk,
     Collection,
     Document,
+    DocumentVersion,
     EvaluationDataset,
     EvaluationResult,
     EvaluationRun,
@@ -34,11 +40,15 @@ from rag_platform.db.models import (
     Project,
     RetrievalFeedback,
     RetrievalRequest,
+    Status,
     Tenant,
 )
 from rag_platform.db.session import get_session
 from rag_platform.services.admin_metrics import metric_timeseries
+from rag_platform.services.cache import CacheUnavailable, clear_rag_cache
+from rag_platform.services.documents import enqueue_deletion, enqueue_indexing
 from rag_platform.services.embedding_admin import embedding_profile
+from rag_platform.services.evaluation_metrics import pin_retrieval_configuration
 from rag_platform.services.health import system_health
 from rag_platform.services.reconciliation import reconcile, reindex_collection, reindex_embeddings
 from rag_platform.services.reranker import reranker_status, test_reranker_connection
@@ -196,11 +206,13 @@ async def admin_document_chunks(
     rows = (
         await session.scalars(
             select(Chunk)
+            .join(DocumentVersion, DocumentVersion.id == Chunk.document_version_id)
             .where(
                 Chunk.document_id == document_id,
                 Chunk.tenant_id == tenant_id,
                 Chunk.project_id == project_id,
                 Chunk.collection == collection,
+                DocumentVersion.is_current.is_(True),
             )
             .order_by(Chunk.chunk_index)
             .limit(limit)
@@ -215,9 +227,99 @@ async def admin_document_chunks(
             "content": row.content,
             "token_count": row.token_count,
             "language": row.language,
+            "source_type": row.source_type,
+            "source_id": row.source_id,
+            "section_title": row.section_title,
+            "start_offset": row.start_offset,
+            "end_offset": row.end_offset,
+            "chunker_version": row.chunker_version,
+            "index_version": row.index_version,
         }
         for row in rows
     ]
+
+
+@router.post("/documents/{document_id}/reindex", status_code=202)
+async def admin_reindex_document(
+    document_id: uuid.UUID,
+    data: DocumentActionRequest,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    collection: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    if not data.confirm:
+        raise HTTPException(409, "explicit confirmation is required")
+    document = await session.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.tenant_id == tenant_id,
+            Document.project_id == project_id,
+            Document.collection == collection,
+            Document.deleted_at.is_(None),
+        )
+    )
+    if document is None:
+        raise HTTPException(404, "document not found")
+    version = await session.scalar(
+        select(DocumentVersion).where(
+            DocumentVersion.document_id == document.id,
+            DocumentVersion.tenant_id == tenant_id,
+            DocumentVersion.project_id == project_id,
+            DocumentVersion.collection == collection,
+            DocumentVersion.is_current.is_(True),
+        )
+    )
+    if version is None:
+        raise HTTPException(409, "current document version is missing")
+    version.status = Status.queued
+    version.error = None
+    job = await enqueue_indexing(session, version)
+    _audit(
+        session,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        action="document.reindex",
+        resource_type="document",
+        resource_id=document.id,
+    )
+    await session.commit()
+    return {"job_id": job.id, "status": "queued"}
+
+
+@router.post("/documents/{document_id}/delete", status_code=202)
+async def admin_delete_document(
+    document_id: uuid.UUID,
+    data: DocumentActionRequest,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    collection: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    if not data.confirm:
+        raise HTTPException(409, "explicit confirmation is required")
+    document = await session.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.tenant_id == tenant_id,
+            Document.project_id == project_id,
+            Document.collection == collection,
+            Document.deleted_at.is_(None),
+        )
+    )
+    if document is None:
+        raise HTTPException(404, "document not found")
+    job = await enqueue_deletion(session, document)
+    _audit(
+        session,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        action="document.delete",
+        resource_type="document",
+        resource_id=document.id,
+    )
+    await session.commit()
+    return {"job_id": job.id, "status": "queued"}
 
 
 @router.get("/evaluation/datasets")
@@ -274,6 +376,63 @@ async def admin_evaluation_runs(
     ]
 
 
+def _comparison_metrics(payload: dict[str, object]) -> dict[str, float]:
+    raw = payload.get("metrics_after_reranking")
+    if not isinstance(raw, dict):
+        raw = payload.get("metrics_before_reranking")
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(name): float(value)
+        for name, value in raw.items()
+        if isinstance(value, (int, float)) and not isinstance(value, bool)
+    }
+
+
+@router.post("/evaluation/compare")
+async def admin_compare_evaluation_runs(
+    data: EvaluationRunComparisonRequest,
+    tenant_id: uuid.UUID,
+    project_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    async def scoped_run(run_id: uuid.UUID) -> EvaluationRun:
+        run = await session.scalar(
+            select(EvaluationRun).where(
+                EvaluationRun.id == run_id,
+                EvaluationRun.tenant_id == tenant_id,
+                EvaluationRun.project_id == project_id,
+            )
+        )
+        if run is None:
+            raise HTTPException(404, "evaluation run not found")
+        if run.payload.get("status") != "completed":
+            raise HTTPException(409, "evaluation runs must be completed before comparison")
+        return run
+
+    baseline = await scoped_run(data.baseline_run_id)
+    candidate = await scoped_run(data.candidate_run_id)
+    baseline_metrics = _comparison_metrics(baseline.payload)
+    candidate_metrics = _comparison_metrics(candidate.payload)
+    metric_names = sorted(baseline_metrics.keys() | candidate_metrics.keys())
+    return {
+        "baseline": {"id": baseline.id, "configuration": baseline.payload.get("configuration", {})},
+        "candidate": {
+            "id": candidate.id,
+            "configuration": candidate.payload.get("configuration", {}),
+        },
+        "comparison": [
+            {
+                "metric": name,
+                "baseline": baseline_metrics.get(name, 0.0),
+                "candidate": candidate_metrics.get(name, 0.0),
+                "delta": candidate_metrics.get(name, 0.0) - baseline_metrics.get(name, 0.0),
+            }
+            for name in metric_names
+        ],
+    }
+
+
 @router.get("/evaluation/runs/{run_id}")
 async def admin_evaluation_run(
     run_id: uuid.UUID,
@@ -328,7 +487,10 @@ async def admin_create_evaluation_run(
         payload={
             "dataset_id": str(dataset.id),
             "status": "queued",
-            "configuration": data.model_dump(exclude={"dataset_id"}),
+            "configuration": pin_retrieval_configuration(
+                data.model_dump(exclude={"dataset_id"}),
+                get_settings(),
+            ),
         },
     )
     session.add(run)
@@ -791,13 +953,78 @@ async def cancel_indexing_job(
     return {"id": job.id, "status": "canceled"}
 
 
+def _metric_value(name: str, labels: dict[str, str] | None = None) -> float:
+    return float(REGISTRY.get_sample_value(name, labels) or 0.0)
+
+
 @router.get("/dashboard")
 async def dashboard(
     session: AsyncSession = Depends(get_session),
-) -> dict[str, int]:
-    documents = await session.scalar(select(func.count()).select_from(Document)) or 0
-    chunks = await session.scalar(select(func.count()).select_from(Chunk)) or 0
-    return {"documents": documents, "chunks": chunks, "embeddings": chunks}
+) -> dict[str, object]:
+    documents = (
+        await session.scalar(
+            select(func.count()).select_from(Document).where(Document.deleted_at.is_(None))
+        )
+        or 0
+    )
+    chunks = (
+        await session.scalar(
+            select(func.count())
+            .select_from(Chunk)
+            .join(DocumentVersion, DocumentVersion.id == Chunk.document_version_id)
+            .join(Document, Document.id == Chunk.document_id)
+            .where(
+                DocumentVersion.is_current.is_(True),
+                Document.deleted_at.is_(None),
+            )
+        )
+        or 0
+    )
+    recent_failures = (
+        await session.scalar(
+            select(func.count())
+            .select_from(IndexingJob)
+            .where(
+                IndexingJob.payload["status"].astext.in_(["failed", "dead_letter"]),
+                IndexingJob.created_at >= datetime.now(UTC) - timedelta(hours=24),
+            )
+        )
+        or 0
+    )
+    retrieval_count = sum(
+        _metric_value("rag_retrieval_latency_seconds_count", {"mode": mode})
+        for mode in ("lexical", "dense", "hybrid")
+    )
+    retrieval_sum = sum(
+        _metric_value("rag_retrieval_latency_seconds_sum", {"mode": mode})
+        for mode in ("lexical", "dense", "hybrid")
+    )
+    reranker_count = _metric_value("rag_reranker_latency_seconds_count")
+    reranker_sum = _metric_value("rag_reranker_latency_seconds_sum")
+    cache_labels = {"cache": "query_embedding"}
+    cache_hits = _metric_value("rag_cache_hits_total", cache_labels)
+    cache_misses = _metric_value("rag_cache_misses_total", cache_labels)
+    health_snapshot, model = await system_health(), await embedding_profile()
+    settings = get_settings()
+    return {
+        "documents": documents,
+        "chunks": chunks,
+        "recent_indexing_failures": recent_failures,
+        "active_index": settings.index_version,
+        "embedding": model,
+        "health": health_snapshot,
+        "retrieval_latency_ms": (
+            round(retrieval_sum / retrieval_count * 1000, 2) if retrieval_count else None
+        ),
+        "reranker_latency_ms": (
+            round(reranker_sum / reranker_count * 1000, 2) if reranker_count else None
+        ),
+        "cache_hit_rate": (
+            round(cache_hits / (cache_hits + cache_misses), 4)
+            if cache_hits + cache_misses
+            else None
+        ),
+    }
 
 
 @router.get("/metrics/timeseries")
@@ -874,6 +1101,30 @@ async def health() -> dict[str, object]:
 @router.get("/system/resources")
 async def resources() -> dict[str, object]:
     return system_resources()
+
+
+@router.post("/cache/clear")
+async def clear_cache(
+    data: CacheClearRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    if not data.confirm:
+        raise HTTPException(409, "explicit confirmation is required")
+    try:
+        deleted = await clear_rag_cache()
+    except CacheUnavailable as exc:
+        raise HTTPException(503, "RAG cache is unavailable") from exc
+    global_scope = uuid.UUID(int=0)
+    _audit(
+        session,
+        tenant_id=global_scope,
+        project_id=None,
+        action="cache.clear",
+        resource_type="cache",
+        resource_id=global_scope,
+    )
+    await session.commit()
+    return {"status": "cleared", "deleted_keys": deleted}
 
 
 @router.get("/settings")

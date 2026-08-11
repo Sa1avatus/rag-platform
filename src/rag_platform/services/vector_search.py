@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_platform.db.models import Chunk, ChunkEmbedding, Document
+from rag_platform.db.models import Chunk, ChunkEmbedding, Document, DocumentVersion
 
 
 async def vector_search(
@@ -21,12 +21,14 @@ async def vector_search(
     statement = (
         select(Chunk, Document.external_document_id, distance.label("distance"))
         .join(ChunkEmbedding, ChunkEmbedding.chunk_id == Chunk.id)
+        .join(DocumentVersion, DocumentVersion.id == Chunk.document_version_id)
         .join(Document, Document.id == Chunk.document_id)
         .where(
             Chunk.tenant_id == tenant_id,
             Chunk.project_id == project_id,
             Chunk.collection.in_(collections),
             ChunkEmbedding.model == model,
+            DocumentVersion.is_current.is_(True),
             Document.deleted_at.is_(None),
         )
         .order_by(distance)

@@ -98,6 +98,13 @@ class RuntimeSetting(Base, TimestampMixin):
 class Document(Base, TimestampMixin):
     __tablename__ = "documents"
     __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "project_id",
+            "collection",
+            "external_document_id",
+            name="uq_documents_scope_external_id",
+        ),
         Index("ix_documents_scope", "tenant_id", "project_id", "collection"),
         Index("ix_documents_metadata", "metadata", postgresql_using="gin"),
     )
@@ -142,6 +149,21 @@ class DocumentVersion(Base, TimestampMixin):
     version: Mapped[int] = mapped_column(Integer)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
+    parser_version: Mapped[str] = mapped_column(
+        String(100), default="text-v1", server_default="text-v1"
+    )
+    chunker_version: Mapped[str] = mapped_column(
+        String(100), default="word-window-v1", server_default="word-window-v1"
+    )
+    embedding_model: Mapped[str] = mapped_column(
+        String(300), default="BAAI/bge-m3", server_default="BAAI/bge-m3"
+    )
+    embedding_revision: Mapped[str] = mapped_column(
+        String(200), default="default", server_default="default"
+    )
+    index_version: Mapped[str] = mapped_column(
+        String(100), default="rag-chunks-v1", server_default="rag-chunks-v1"
+    )
     status: Mapped[Status] = mapped_column(Enum(Status), default=Status.received)
     error: Mapped[str | None] = mapped_column(Text)
     document: Mapped[Document] = relationship(back_populates="versions")
@@ -184,18 +206,42 @@ class Chunk(Base, TimestampMixin):
     language: Mapped[str] = mapped_column(String(16))
     content_hash: Mapped[str] = mapped_column(String(64), index=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
+    source_type: Mapped[str] = mapped_column(String(100), default="text", server_default="text")
+    source_id: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    section_title: Mapped[str | None] = mapped_column(String(500))
+    start_offset: Mapped[int | None] = mapped_column(Integer)
+    end_offset: Mapped[int | None] = mapped_column(Integer)
+    chunker_version: Mapped[str] = mapped_column(
+        String(100), default="word-window-v1", server_default="word-window-v1"
+    )
+    index_version: Mapped[str] = mapped_column(
+        String(100), default="rag-chunks-v1", server_default="rag-chunks-v1"
+    )
     embedding_model: Mapped[str] = mapped_column(String(300))
     embedding_dimension: Mapped[int] = mapped_column(Integer)
 
 
 class ChunkEmbedding(Base, TimestampMixin):
     __tablename__ = "chunk_embeddings"
+    __table_args__ = (
+        UniqueConstraint(
+            "chunk_id",
+            "model",
+            "model_revision",
+            name="uq_chunk_embeddings_identity",
+        ),
+    )
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     chunk_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chunks.id", ondelete="CASCADE"), index=True
     )
     model: Mapped[str] = mapped_column(String(300))
     model_revision: Mapped[str] = mapped_column(String(200), default="default")
+    backend: Mapped[str] = mapped_column(
+        String(100), default="sentence-transformers", server_default="sentence-transformers"
+    )
+    normalization: Mapped[str] = mapped_column(String(40), default="l2", server_default="l2")
+    embedding_dimension: Mapped[int] = mapped_column(Integer, default=1024, server_default="1024")
     embedding: Mapped[list[float]] = mapped_column(Vector(1024))
 
 

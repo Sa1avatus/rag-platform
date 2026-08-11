@@ -8,10 +8,13 @@ from fastapi import HTTPException
 from rag_platform.api.routes import admin
 from rag_platform.api.schemas import (
     ApiKeyCreate,
+    CacheClearRequest,
     CollectionCreate,
     CollectionUpdate,
     ConfigurationComparisonRequest,
+    DocumentActionRequest,
     EmbeddingReindexRequest,
+    EvaluationRunComparisonRequest,
     EvaluationRunCreate,
     ProjectCreate,
     ProjectUpdate,
@@ -25,8 +28,10 @@ from rag_platform.db.models import (
     AuditLog,
     Chunk,
     Document,
+    DocumentVersion,
     EvaluationDataset,
     EvaluationResult,
+    EvaluationRun,
     IndexingJob,
     Project,
     RetrievalFeedback,
@@ -144,8 +149,87 @@ async def test_admin_documents_and_chunks_are_explicitly_scoped() -> None:
             "content": "Safe content",
             "token_count": 2,
             "language": "en",
+            "source_type": None,
+            "source_id": None,
+            "section_title": None,
+            "start_offset": None,
+            "end_offset": None,
+            "chunker_version": None,
+            "index_version": None,
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_admin_document_actions_are_confirmed_scoped_and_audited(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tenant_id, project_id, document_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    document = Document(
+        id=document_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        external_document_id="guide",
+        current_version=1,
+        metadata_={},
+    )
+    version = DocumentVersion(
+        id=uuid.uuid4(),
+        document_id=document_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        external_document_id="guide",
+        document_type="text",
+        content="content",
+        content_hash="hash",
+        version=1,
+        metadata_={},
+    )
+    reindex_job = IndexingJob(id=uuid.uuid4(), tenant_id=tenant_id, project_id=project_id)
+    delete_job = IndexingJob(id=uuid.uuid4(), tenant_id=tenant_id, project_id=project_id)
+
+    async def enqueue_indexing(session: object, current: DocumentVersion) -> IndexingJob:
+        assert current is version
+        return reindex_job
+
+    async def enqueue_deletion(session: object, current: Document) -> IndexingJob:
+        assert current is document
+        return delete_job
+
+    monkeypatch.setattr(admin, "enqueue_indexing", enqueue_indexing)
+    monkeypatch.setattr(admin, "enqueue_deletion", enqueue_deletion)
+    scope = {"tenant_id": tenant_id, "project_id": project_id, "collection": "manuals"}
+
+    reindex_session = FakeSession(scalar_values=[document, version])
+    reindexed = await admin.admin_reindex_document(
+        document_id,
+        DocumentActionRequest(confirm=True),
+        session=reindex_session,
+        **scope,
+    )
+    assert reindexed == {"job_id": reindex_job.id, "status": "queued"}
+    assert reindex_session.added[0].payload["action"] == "document.reindex"  # type: ignore[attr-defined]
+
+    delete_session = FakeSession(scalar_values=[document])
+    deleted = await admin.admin_delete_document(
+        document_id,
+        DocumentActionRequest(confirm=True),
+        session=delete_session,
+        **scope,
+    )
+    assert deleted == {"job_id": delete_job.id, "status": "queued"}
+    assert delete_session.added[0].payload["action"] == "document.delete"  # type: ignore[attr-defined]
+
+    with pytest.raises(HTTPException) as error:
+        await admin.admin_delete_document(
+            document_id,
+            DocumentActionRequest(confirm=False),
+            session=FakeSession(),
+            **scope,
+        )
+    assert error.value.status_code == 409
 
 
 @pytest.mark.asyncio
@@ -184,6 +268,70 @@ async def test_admin_evaluation_listing_run_and_results() -> None:
         run.id, tenant_id, project_id, FakeSession(scalar_values=[run], rows=[result])
     )
     assert detail["results"][0]["recall_at_5"] == 1.0  # type: ignore[index]
+
+
+@pytest.mark.asyncio
+async def test_admin_evaluation_comparison_is_scoped_and_deterministic() -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    baseline = EvaluationRun(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={
+            "status": "completed",
+            "configuration": {"mode": "dense"},
+            "metrics_after_reranking": {"MRR": 0.4, "Recall@5": 0.7},
+        },
+    )
+    candidate = EvaluationRun(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={
+            "status": "completed",
+            "configuration": {"mode": "hybrid"},
+            "metrics_after_reranking": {"MRR": 0.55, "NDCG@5": 0.8},
+        },
+    )
+    result = await admin.admin_compare_evaluation_runs(
+        EvaluationRunComparisonRequest(baseline_run_id=baseline.id, candidate_run_id=candidate.id),
+        tenant_id,
+        project_id,
+        FakeSession(scalar_values=[baseline, candidate]),
+    )
+    assert [row["metric"] for row in result["comparison"]] == [  # type: ignore[index]
+        "MRR",
+        "NDCG@5",
+        "Recall@5",
+    ]
+    assert result["comparison"][0]["delta"] == pytest.approx(0.15)  # type: ignore[index]
+    assert result["comparison"][1]["baseline"] == 0.0  # type: ignore[index]
+    assert result["comparison"][2]["candidate"] == 0.0  # type: ignore[index]
+
+
+@pytest.mark.asyncio
+async def test_admin_evaluation_comparison_rejects_missing_or_incomplete_runs() -> None:
+    tenant_id, project_id = uuid.uuid4(), uuid.uuid4()
+    data = EvaluationRunComparisonRequest(
+        baseline_run_id=uuid.uuid4(), candidate_run_id=uuid.uuid4()
+    )
+    with pytest.raises(HTTPException) as missing:
+        await admin.admin_compare_evaluation_runs(
+            data, tenant_id, project_id, FakeSession(scalar_values=[None])
+        )
+    assert missing.value.status_code == 404
+
+    queued = EvaluationRun(
+        id=data.baseline_run_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        payload={"status": "queued"},
+    )
+    with pytest.raises(HTTPException) as incomplete:
+        await admin.admin_compare_evaluation_runs(
+            data, tenant_id, project_id, FakeSession(scalar_values=[queued])
+        )
+    assert incomplete.value.status_code == 409
 
 
 @pytest.mark.asyncio
@@ -609,19 +757,25 @@ async def test_retrieval_trace_detail_and_repeat(monkeypatch: pytest.MonkeyPatch
 
 @pytest.mark.asyncio
 async def test_dashboard_settings_and_health(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert await admin.dashboard(FakeSession(scalar_values=[3, 9])) == {
-        "documents": 3,
-        "chunks": 9,
-        "embeddings": 9,
-    }
+    async def system_health() -> dict[str, object]:
+        return {"status": "operational", "components": []}
+
+    async def embedding_profile() -> dict[str, object]:
+        return {"model": "BAAI/bge-m3", "revision": "default"}
+
+    monkeypatch.setattr(admin, "system_health", system_health)
+    monkeypatch.setattr(admin, "embedding_profile", embedding_profile)
+    monkeypatch.setattr(admin, "_metric_value", lambda *args, **kwargs: 0.0)
+    dashboard = await admin.dashboard(FakeSession(scalar_values=[3, 9, 1]))
+    assert dashboard["documents"] == 3
+    assert dashboard["chunks"] == 9
+    assert dashboard["recent_indexing_failures"] == 1
+    assert dashboard["health"] == {"status": "operational", "components": []}
+    assert dashboard["cache_hit_rate"] is None
     settings = await admin.settings(FakeSession())
     vector = next(item for item in settings["settings"] if item["key"] == "default_vector_top_k")  # type: ignore[union-attr]
     assert vector["value"] == 30
 
-    async def system_health() -> dict[str, object]:
-        return {"status": "operational", "components": []}
-
-    monkeypatch.setattr(admin, "system_health", system_health)
     assert (await admin.health())["status"] == "operational"
 
     monkeypatch.setattr(
@@ -648,6 +802,25 @@ async def test_update_runtime_settings_is_persistent_and_audited() -> None:
     with pytest.raises(HTTPException) as error:
         await admin.update_settings(RuntimeSettingsUpdate(), FakeSession())
     assert error.value.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_clear_cache_requires_confirmation_and_is_audited(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def clear_rag_cache() -> int:
+        return 3
+
+    monkeypatch.setattr(admin, "clear_rag_cache", clear_rag_cache)
+    session = FakeSession()
+    response = await admin.clear_cache(CacheClearRequest(confirm=True), session)
+    assert response == {"status": "cleared", "deleted_keys": 3}
+    assert session.commits == 1
+    assert session.added[0].payload["action"] == "cache.clear"  # type: ignore[attr-defined]
+
+    with pytest.raises(HTTPException) as error:
+        await admin.clear_cache(CacheClearRequest(confirm=False), FakeSession())
+    assert error.value.status_code == 409
 
 
 @pytest.mark.asyncio

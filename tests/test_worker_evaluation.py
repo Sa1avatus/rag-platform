@@ -94,7 +94,10 @@ async def test_evaluate_run_completes_and_aggregates(monkeypatch: pytest.MonkeyP
         return (
             uuid.uuid4(),
             [{"document_id": "guide-1", "chunk_id": "chunk-1"}],
-            {"latency_ms": 12.5},
+            {
+                "latency_ms": 12.5,
+                "fusion_candidates": [{"document_id": "irrelevant", "chunk_id": "chunk-2"}],
+            },
         )
 
     monkeypatch.setattr(evaluation, "search", search)
@@ -103,6 +106,10 @@ async def test_evaluate_run_completes_and_aggregates(monkeypatch: pytest.MonkeyP
     assert run.payload["status"] == "completed"
     assert run.payload["case_count"] == 1
     assert run.payload["metrics"]["Recall@1"] == 1.0
+    assert run.payload["metrics_before_reranking"]["Recall@1"] == 0.0
+    assert run.payload["reranker_uplift"]["Recall@1"] == 1.0
+    result = session.added[0]
+    assert result.payload["metrics_after_reranking"]["MRR"] == 1.0  # type: ignore[attr-defined]
     assert len(session.added) == 1
     assert session.commits == 3
 
@@ -178,3 +185,4 @@ def test_evaluation_value_helpers() -> None:
     assert evaluation._mean([]) == 0.0
     assert evaluation._percentile([1.0, 2.0, 10.0], 0.95) == 10.0
     assert evaluation._percentile([], 0.95) == 0.0
+    assert evaluation._delta_metrics({"MRR": 0.5}, {"MRR": 1.0}) == {"MRR": 0.5}

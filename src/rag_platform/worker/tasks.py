@@ -1,7 +1,5 @@
 import asyncio
-import hashlib
 import json
-import re
 import uuid
 from collections.abc import Awaitable
 from datetime import UTC, datetime
@@ -21,6 +19,7 @@ from rag_platform.db.models import (
     Status,
 )
 from rag_platform.db.session import Session, engine
+from rag_platform.services.chunking import ChunkingConfig, chunk_text
 from rag_platform.services.opensearch import (
     OpenSearchUnavailable,
     delete_document_chunks,
@@ -28,6 +27,7 @@ from rag_platform.services.opensearch import (
 )
 from rag_platform.services.readiness import MODEL_READY_KEY
 from rag_platform.services.reconciliation import reconcile
+from rag_platform.services.versioning import content_hash, stable_chunk_id
 from rag_platform.worker.embeddings import dimension, embed
 from rag_platform.worker.evaluation import evaluate_run
 from rag_platform.worker.outbox import publish_pending
@@ -48,12 +48,13 @@ def chunks(
     target_words: int = 330,
     overlap_words: int = 45,
 ) -> list[str]:
-    words = re.split(r"\s+", text.strip())
-    step = max(1, target_words - overlap_words)
     return [
-        " ".join(words[start : start + target_words])
-        for start in range(0, len(words), step)
-        if words[start : start + target_words]
+        draft.content
+        for draft in chunk_text(
+            text,
+            "recursive",
+            ChunkingConfig(target_words, overlap_words, 1),
+        )
     ]
 
 
@@ -80,27 +81,55 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
         }
         await session.commit()
         try:
-            parts = chunks(version.content)
+            settings = get_settings()
+            drafts = chunk_text(
+                version.content,
+                settings.chunk_strategy,
+                ChunkingConfig(
+                    settings.chunk_size_words,
+                    settings.chunk_overlap_words,
+                    settings.chunk_min_words,
+                ),
+            )
+            parts = [draft.content for draft in drafts]
             vectors = embed(parts)
             embedding_dimension = dimension()
             if vectors and len(vectors[0]) != embedding_dimension:
                 raise RuntimeError("embedding dimension mismatch")
             await session.execute(delete(Chunk).where(Chunk.document_version_id == version.id))
-            for index, (content, vector) in enumerate(zip(parts, vectors, strict=True)):
-                digest = hashlib.sha256(content.encode()).hexdigest()
+            version.parser_version = settings.parser_version
+            version.chunker_version = settings.chunker_version
+            version.embedding_model = settings.embedding_model
+            version.embedding_revision = settings.embedding_revision
+            version.index_version = settings.index_version
+            for draft, vector in zip(drafts, vectors, strict=True):
+                digest = content_hash(draft.content)
                 chunk = Chunk(
+                    id=stable_chunk_id(
+                        version.id,
+                        settings.chunker_version,
+                        draft.chunk_index,
+                        digest,
+                    ),
                     document_id=version.document_id,
                     document_version_id=version.id,
                     tenant_id=version.tenant_id,
                     project_id=version.project_id,
                     collection=version.collection,
-                    chunk_index=index,
-                    content=content,
-                    token_count=len(content.split()),
+                    chunk_index=draft.chunk_index,
+                    content=draft.content,
+                    token_count=len(draft.content.split()),
                     language=version.language,
                     content_hash=digest,
                     metadata_=version.metadata_,
-                    embedding_model=get_settings().embedding_model,
+                    source_type=version.document_type,
+                    source_id=version.external_document_id,
+                    section_title=draft.section_title,
+                    start_offset=draft.start_offset,
+                    end_offset=draft.end_offset,
+                    chunker_version=settings.chunker_version,
+                    index_version=settings.index_version,
+                    embedding_model=settings.embedding_model,
                     embedding_dimension=embedding_dimension,
                 )
                 session.add(chunk)
@@ -108,7 +137,11 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
                 session.add(
                     ChunkEmbedding(
                         chunk_id=chunk.id,
-                        model=get_settings().embedding_model,
+                        model=settings.embedding_model,
+                        model_revision=settings.embedding_revision,
+                        backend=settings.embedding_backend,
+                        normalization=settings.embedding_normalization,
+                        embedding_dimension=embedding_dimension,
                         embedding=vector,
                     )
                 )

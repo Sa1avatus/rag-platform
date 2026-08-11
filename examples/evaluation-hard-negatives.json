@@ -1,0 +1,22 @@
+{
+  "project_id": "00000000-0000-0000-0000-000000000001",
+  "name": "cross-domain-hard-negatives",
+  "version": 1,
+  "collections": ["opportunities"],
+  "cases": [
+    {
+      "query": "senior Python machine learning engineer with production RAG experience",
+      "filters": {"document_type": "opportunity"},
+      "expected_document_ids": ["opportunity-python-ml-001"],
+      "relevance_grades": {
+        "opportunity-python-ml-001": 3,
+        "opportunity-data-platform-002": 1,
+        "opportunity-sous-chef-003": 0
+      },
+      "forbidden_results": ["opportunity-sous-chef-003"],
+      "tags": ["hard-negative", "cross-domain", "hybrid-reranking"],
+      "difficulty": "hard",
+      "category": "occupation-domain-separation"
+    }
+  ]
+}

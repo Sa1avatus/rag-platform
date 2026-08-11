@@ -8,6 +8,14 @@ Core paths are `/v1/documents`, `/v1/retrieval/search`, `/v1/retrieval/context`,
 `/v1/evaluations/*`, and `/v1/admin/*`. Context returns sources and assembled text, never an LLM
 answer.
 
+Retrieval accepts `mode` as `lexical`, `dense`, or `hybrid` (the default). Lexical mode avoids the
+embedding worker while OpenSearch is healthy; dense mode does not call OpenSearch; hybrid mode
+combines both rankings with RRF. If OpenSearch fails, hybrid and lexical requests degrade to dense
+retrieval and expose `requested_mode`, `effective_mode`, stage timings, and the degraded state in
+the trace. Results include source provenance, per-stage scores, reranker score when present, and
+final rank. `/v1/retrieval/context` additionally enforces `max_context_chunks`,
+`max_context_tokens`, and `per_document_limit`, and suppresses near-duplicate chunks.
+
 `POST /v1/documents/upload` accepts multipart fields `project_id`, `collection`,
 `external_document_id`, `file`, optional `document_type`, `language`, `version`, and JSON-object
 `metadata`. The service validates the complete source before extraction, stores the original in
@@ -21,6 +29,9 @@ through `POST /v1/admin/indexing/jobs/{job_id}/cancel`. Running jobs cannot be c
 by status and optional project, skips malformed legacy targets, and commits the batch atomically.
 `GET /v1/admin/indexing/jobs/{job_id}` returns one job using the same status and stage fields as the
 list response.
+Document operators can use `POST /v1/admin/documents/{document_id}/reindex` and
+`POST /v1/admin/documents/{document_id}/delete`; both require tenant, project, and collection scope
+parameters plus `{"confirm": true}`, enqueue an idempotent worker job, and write an audit event.
 Create a tenant with `POST /v1/admin/tenants` before registering projects or service API keys for
 that tenant.
 Projects and collections support detail reads and partial updates at
@@ -50,6 +61,9 @@ daily count buckets over a maximum 90-day range, with optional project and colle
 `GET /v1/admin/settings` returns persistent runtime values with descriptions, defaults, ranges, and
 restart/reindex flags. `PATCH /v1/admin/settings` accepts only the documented typed allowlist and
 records the mutation in the audit log; it never accepts or returns secrets.
+`POST /v1/admin/cache/clear` requires `{"confirm": true}` and deletes only keys below the configured
+RAG cache namespace. It does not flush Celery results or unrelated Redis data and records an audit
+event.
 `GET /v1/admin/audit-log` lists newest administrative mutations and can filter by action, tenant,
 or project. Audit payloads contain resource identifiers only; service-key secrets and hashes are
 never recorded.
@@ -71,3 +85,9 @@ stops on the first `409`, while documents accepted before that failure remain co
 `expected_lock_version` plus new `content`. Optional title, type, language, and metadata values
 inherit from the current document when omitted. Document list and detail responses expose the
 current `lock_version`; stale writers receive `409`.
+
+Evaluation cases accept optional `tags`, `difficulty`, and `category`. Every run pins the retrieval,
+embedding, chunker, index, and reranker-contract identity. Results persist metrics before reranking,
+after reranking, and their per-metric delta; the run stores the corresponding aggregate uplift.
+`examples/evaluation-hard-negatives.json` is a schema-validated generic cross-domain regression
+dataset; it demonstrates diagnosable hard negatives without embedding client business rules.

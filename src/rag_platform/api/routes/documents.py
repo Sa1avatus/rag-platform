@@ -277,11 +277,13 @@ async def document_chunks(
     rows = (
         await session.scalars(
             select(Chunk)
+            .join(DocumentVersion, DocumentVersion.id == Chunk.document_version_id)
             .where(
                 Chunk.document_id == document.id,
                 Chunk.tenant_id == who.tenant_id,
                 Chunk.project_id == document.project_id,
                 Chunk.collection == document.collection,
+                DocumentVersion.is_current.is_(True),
             )
             .order_by(Chunk.chunk_index)
             .limit(limit)
@@ -299,6 +301,13 @@ async def document_chunks(
             "language": row.language,
             "content_hash": row.content_hash,
             "metadata": row.metadata_,
+            "source_type": row.source_type,
+            "source_id": row.source_id,
+            "section_title": row.section_title,
+            "start_offset": row.start_offset,
+            "end_offset": row.end_offset,
+            "chunker_version": row.chunker_version,
+            "index_version": row.index_version,
             "embedding_model": row.embedding_model,
             "embedding_dimension": row.embedding_dimension,
         }

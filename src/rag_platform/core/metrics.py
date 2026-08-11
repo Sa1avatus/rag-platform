@@ -20,6 +20,14 @@ EMBEDDING_DURATION = Histogram(
     "rag_embedding_duration_seconds",
     "Embedding batch duration",
 )
+EMBEDDING_REQUESTS = Counter(
+    "rag_embedding_requests_total",
+    "Embedding batches requested",
+)
+EMBEDDING_FAILURES = Counter(
+    "rag_embedding_failures_total",
+    "Embedding batches that failed",
+)
 EMBEDDING_BATCH_SIZE = Histogram(
     "rag_embedding_batch_size",
     "Number of texts per embedding batch",
@@ -41,6 +49,10 @@ RERANKER_DURATION = Histogram(
     "rag_reranker_duration_seconds",
     "External reranker duration",
 )
+RERANKER_REQUESTS = Counter(
+    "rag_reranker_requests_total",
+    "External reranker requests",
+)
 RERANKER_ERRORS = Counter(
     "rag_reranker_errors_total",
     "External reranker errors",
@@ -53,6 +65,21 @@ RETRIEVAL_EMPTY = Counter(
     "rag_retrieval_empty_total",
     "Retrieval requests with no results",
 )
+RETRIEVAL_REQUESTS = Counter(
+    "rag_retrieval_requests_total",
+    "Retrieval requests",
+    ["mode"],
+)
+RETRIEVAL_FAILURES = Counter(
+    "rag_retrieval_failures_total",
+    "Retrieval requests that failed",
+    ["mode"],
+)
+RETRIEVAL_DURATION = Histogram(
+    "rag_retrieval_latency_seconds",
+    "End-to-end retrieval latency",
+    ["mode"],
+)
 RETRIEVAL_RESULTS_COUNT = Histogram(
     "rag_retrieval_results_count",
     "Results returned per retrieval request",
@@ -62,5 +89,13 @@ DUPLICATE_CHUNKS_REMOVED = Counter(
     "rag_duplicate_chunks_removed_total",
     "Duplicate chunks removed during fusion",
 )
-CACHE_HITS = Counter("rag_cache_hits_total", "Embedding cache hits")
-CACHE_MISSES = Counter("rag_cache_misses_total", "Embedding cache misses")
+CACHE_HITS = Counter("rag_cache_hits_total", "Cache hits", ["cache"])
+CACHE_MISSES = Counter("rag_cache_misses_total", "Cache misses", ["cache"])
+EVALUATION_RUNS = Counter(
+    "rag_evaluation_runs_total",
+    "Evaluation runs started",
+)
+EVALUATION_FAILURES = Counter(
+    "rag_evaluation_failures_total",
+    "Evaluation runs that failed",
+)

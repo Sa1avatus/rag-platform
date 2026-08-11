@@ -1,4 +1,3 @@
-import hashlib
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update
@@ -6,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.api.schemas import DocumentCreate
 from rag_platform.core.auth import Principal
+from rag_platform.core.config import get_settings
 from rag_platform.core.metrics import DOCUMENTS_RECEIVED
 from rag_platform.db.models import (
     Collection,
@@ -14,6 +14,12 @@ from rag_platform.db.models import (
     IndexingJob,
     OutboxEvent,
     Status,
+)
+from rag_platform.services.versioning import (
+    content_hash,
+    normalize_content,
+    stable_document_id,
+    stable_version_id,
 )
 
 
@@ -28,7 +34,10 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
     )
     if collection is None:
         raise ValueError("collection not found")
-    digest = hashlib.sha256(data.content.encode()).hexdigest()
+    normalized_content = normalize_content(data.content)
+    if not normalized_content:
+        raise ValueError("content is empty after normalization")
+    digest = content_hash(normalized_content)
     existing = await session.scalar(
         select(DocumentVersion).where(
             DocumentVersion.tenant_id == who.tenant_id,
@@ -39,7 +48,10 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
         )
     )
     if existing:
-        if existing.content_hash != digest:
+        if (
+            existing.content_hash != digest
+            and normalize_content(existing.content) != normalized_content
+        ):
             raise ValueError("version already exists with different content")
         return existing
     document = await session.scalar(
@@ -52,6 +64,12 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
     )
     if document is None:
         document = Document(
+            id=stable_document_id(
+                who.tenant_id,
+                data.project_id,
+                data.collection,
+                data.external_document_id,
+            ),
             tenant_id=who.tenant_id,
             project_id=data.project_id,
             collection=data.collection,
@@ -70,7 +88,9 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
         document.current_version = data.version
         document.lock_version += 1
         document.metadata_ = data.metadata
+    settings = get_settings()
     version = DocumentVersion(
+        id=stable_version_id(document.id, data.version, digest),
         document_id=document.id,
         tenant_id=who.tenant_id,
         project_id=data.project_id,
@@ -78,12 +98,17 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
         external_document_id=data.external_document_id,
         document_type=data.document_type,
         title=data.title,
-        content=data.content,
+        content=normalized_content,
         content_hash=digest,
         language=data.language,
         version=data.version,
         is_current=data.version == document.current_version,
         metadata_=data.metadata,
+        parser_version=settings.parser_version,
+        chunker_version=settings.chunker_version,
+        embedding_model=settings.embedding_model,
+        embedding_revision=settings.embedding_revision,
+        index_version=settings.index_version,
         status=Status.queued,
     )
     session.add(version)

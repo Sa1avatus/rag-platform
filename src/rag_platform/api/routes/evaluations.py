@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.api.schemas import EvaluationDatasetCreate, EvaluationRunCreate
 from rag_platform.core.auth import Principal, principal
+from rag_platform.core.config import get_settings
 from rag_platform.db.models import (
     EvaluationCase,
     EvaluationDataset,
@@ -14,6 +15,7 @@ from rag_platform.db.models import (
     OutboxEvent,
 )
 from rag_platform.db.session import get_session
+from rag_platform.services.evaluation_metrics import pin_retrieval_configuration
 
 router = APIRouter(prefix="/v1/evaluations", tags=["evaluations"])
 
@@ -73,7 +75,10 @@ async def create_run(
         payload={
             "dataset_id": str(dataset.id),
             "status": "queued",
-            "configuration": data.model_dump(exclude={"dataset_id"}),
+            "configuration": pin_retrieval_configuration(
+                data.model_dump(exclude={"dataset_id"}),
+                get_settings(),
+            ),
         },
     )
     session.add(run)

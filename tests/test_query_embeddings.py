@@ -21,6 +21,18 @@ class FakeResult:
         self.forgotten = True
 
 
+@pytest.fixture(autouse=True)
+def cache_miss(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def get_cached(query: str) -> None:
+        return None
+
+    async def set_cached(query: str, vector: list[float]) -> None:
+        return None
+
+    monkeypatch.setattr(query_embeddings, "get_query_embedding", get_cached)
+    monkeypatch.setattr(query_embeddings, "set_query_embedding", set_cached)
+
+
 @pytest.mark.asyncio
 async def test_embed_query_returns_numeric_vector(monkeypatch: pytest.MonkeyPatch) -> None:
     result = FakeResult([1, 2.5])
@@ -28,6 +40,21 @@ async def test_embed_query_returns_numeric_vector(monkeypatch: pytest.MonkeyPatc
 
     assert await query_embeddings.embed_query("query") == [1.0, 2.5]
     assert result.forgotten is True
+
+
+@pytest.mark.asyncio
+async def test_embed_query_returns_cached_vector(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def get_cached(query: str) -> list[float]:
+        return [0.25, 0.75]
+
+    monkeypatch.setattr(query_embeddings, "get_query_embedding", get_cached)
+    monkeypatch.setattr(
+        query_embeddings.app,
+        "send_task",
+        lambda *args, **kwargs: pytest.fail("worker should not run on cache hit"),
+    )
+
+    assert await query_embeddings.embed_query("query") == [0.25, 0.75]
 
 
 @pytest.mark.asyncio

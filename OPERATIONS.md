@@ -14,6 +14,16 @@ The reranker is an optional external dependency. An unavailable reranker is show
 does not make retrieval unavailable. Use **Test connection** on the Reranker page to validate the
 configured backend connection without revealing its URL or credentials.
 
+Configure the external service with `RERANKER_BASE_URL` and `RERANKER_API_KEY`. RAG sends the key
+only as a bearer header and propagates request/correlation IDs. Transport errors, rate limits and
+retryable 5xx responses receive at most `RAG_RERANKER_MAX_RETRIES` bounded retries; an invalid or
+unavailable response returns the retrieval/fusion order and marks the request degraded.
+
+Query embeddings are cached in Redis only when `RAG_QUERY_EMBEDDING_CACHE_ENABLED=true`. Keys include
+the normalized query plus embedding backend, model, revision, normalization, and dimension, and
+expire after `RAG_QUERY_EMBEDDING_CACHE_TTL_SECONDS`. The Settings page cache action deletes only
+`RAG_CACHE_NAMESPACE:*`; it never uses `FLUSHDB`.
+
 For a deployment check, verify `docker compose ps`, open the System Health page, then run `pnpm
 e2e` from `web/`. The E2E suite expects the UI at `http://127.0.0.1:8300` and uses the public local
 development token from `.env.example`; do not reuse that token in a deployed environment.

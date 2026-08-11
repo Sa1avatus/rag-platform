@@ -1,5 +1,5 @@
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +46,7 @@ class SearchRequest(BaseModel):
     project_id: uuid.UUID
     collections: list[str] = Field(min_length=1)
     query: str = Field(min_length=1, max_length=10_000)
+    mode: Literal["lexical", "dense", "hybrid"] = "hybrid"
     filters: dict[str, Any] = Field(default_factory=dict)
     vector_top_k: int = Field(default=30, ge=1, le=200)
     bm25_top_k: int = Field(default=30, ge=1, le=200)
@@ -54,6 +55,9 @@ class SearchRequest(BaseModel):
     use_reranker: bool = True
     include_parent_content: bool = True
     include_trace: bool = False
+    max_context_chunks: int = Field(default=8, ge=1, le=50)
+    max_context_tokens: int = Field(default=4000, ge=1, le=100_000)
+    per_document_limit: int = Field(default=3, ge=1, le=20)
 
 
 class SearchResult(BaseModel):
@@ -110,6 +114,7 @@ class CollectionUpdate(BaseModel):
 
 
 class RetrievalConfiguration(BaseModel):
+    mode: Literal["lexical", "dense", "hybrid"] = "hybrid"
     vector_top_k: int = Field(default=30, ge=1, le=200)
     bm25_top_k: int = Field(default=30, ge=1, le=200)
     fusion_top_k: int = Field(default=20, ge=1, le=100)
@@ -147,6 +152,14 @@ class EmbeddingReindexRequest(BaseModel):
     confirm: bool
 
 
+class CacheClearRequest(BaseModel):
+    confirm: bool
+
+
+class DocumentActionRequest(BaseModel):
+    confirm: bool
+
+
 class ContextResponse(BaseModel):
     request_id: uuid.UUID
     sources: list[dict[str, Any]]
@@ -160,6 +173,9 @@ class EvaluationCaseInput(BaseModel):
     expected_chunk_ids: list[str] = Field(default_factory=list)
     relevance_grades: dict[str, int] = Field(default_factory=dict)
     forbidden_results: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    difficulty: str | None = Field(default=None, max_length=100)
+    category: str | None = Field(default=None, max_length=100)
 
 
 class EvaluationDatasetCreate(BaseModel):
@@ -172,8 +188,14 @@ class EvaluationDatasetCreate(BaseModel):
 
 class EvaluationRunCreate(BaseModel):
     dataset_id: uuid.UUID
+    mode: Literal["lexical", "dense", "hybrid"] = "hybrid"
     vector_top_k: int = Field(default=30, ge=1, le=200)
     bm25_top_k: int = Field(default=30, ge=1, le=200)
     fusion_top_k: int = Field(default=20, ge=1, le=100)
     rerank_top_k: int = Field(default=5, ge=1, le=50)
     use_reranker: bool = True
+
+
+class EvaluationRunComparisonRequest(BaseModel):
+    baseline_run_id: uuid.UUID
+    candidate_run_id: uuid.UUID

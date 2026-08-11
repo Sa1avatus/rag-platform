@@ -17,8 +17,13 @@ async def embedding_profile() -> dict[str, Any]:
     return {
         "status": "ready" if ready and compatible else model.get("status", "not_ready"),
         "model": model.get("model", settings.embedding_model),
+        "backend": settings.embedding_backend,
+        "revision": settings.embedding_revision,
+        "normalization": settings.embedding_normalization,
         "device": model.get("device"),
         "dimension": actual_dimension,
         "expected_dimension": settings.embedding_dimension,
+        "chunker_version": settings.chunker_version,
+        "index_version": settings.index_version,
         "compatible": compatible,
     }

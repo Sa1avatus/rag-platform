@@ -7,7 +7,12 @@ from redis import Redis
 from sentence_transformers import SentenceTransformer
 
 from rag_platform.core.config import get_settings
-from rag_platform.core.metrics import EMBEDDING_BATCH_SIZE, EMBEDDING_DURATION
+from rag_platform.core.metrics import (
+    EMBEDDING_BATCH_SIZE,
+    EMBEDDING_DURATION,
+    EMBEDDING_FAILURES,
+    EMBEDDING_REQUESTS,
+)
 from rag_platform.services.embedding_contract import validate_embedding_dimension
 from rag_platform.services.readiness import MODEL_READY_KEY
 
@@ -19,6 +24,7 @@ def model() -> SentenceTransformer:
 
 
 def embed(texts: list[str]) -> list[list[float]]:
+    EMBEDDING_REQUESTS.inc()
     EMBEDDING_BATCH_SIZE.observe(len(texts))
     started = time.perf_counter()
     try:
@@ -27,6 +33,9 @@ def embed(texts: list[str]) -> list[list[float]]:
             batch_size=get_settings().embedding_batch_size,
             normalize_embeddings=True,
         )
+    except Exception:
+        EMBEDDING_FAILURES.inc()
+        raise
     finally:
         EMBEDDING_DURATION.observe(time.perf_counter() - started)
     return [[float(component) for component in vector] for vector in vectors.tolist()]

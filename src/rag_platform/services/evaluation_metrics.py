@@ -1,9 +1,28 @@
 import math
 from collections.abc import Iterable
 
+from rag_platform.core.config import Settings
+
 RECALL_K = (1, 3, 5, 10, 20)
 PRECISION_K = (3, 5, 10)
 NDCG_K = (5, 10)
+
+
+def pin_retrieval_configuration(
+    configuration: dict[str, object],
+    settings: Settings,
+) -> dict[str, object]:
+    return {
+        **configuration,
+        "embedding_backend": settings.embedding_backend,
+        "embedding_model": settings.embedding_model,
+        "embedding_revision": settings.embedding_revision,
+        "embedding_normalization": settings.embedding_normalization,
+        "embedding_dimension": settings.embedding_dimension,
+        "chunker_version": settings.chunker_version,
+        "index_version": settings.index_version,
+        "reranker_contract": "v1",
+    }
 
 
 def case_metrics(

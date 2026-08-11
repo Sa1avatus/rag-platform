@@ -3,7 +3,8 @@ import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "react-router-dom";
 import {api} from "./api";
 const Loading=()=> <div className="skeleton">Loading…</div>;
-export function Dashboard(){const q=useQuery({queryKey:["dashboard"],queryFn:()=>api<Record<string,number>>("/v1/admin/dashboard")});if(q.isLoading)return <Loading/>;if(q.error)return <p role="alert">{q.error.message}</p>;return <><header><h1>Dashboard</h1><select aria-label="Period"><option>Last 24 hours</option><option>7 days</option><option>30 days</option></select></header><section className="cards">{Object.entries(q.data??{}).map(([k,v])=><article key={k}><span>{k}</span><strong>{v.toLocaleString()}</strong></article>)}</section></>}
+type DashboardSnapshot={documents:number;chunks:number;recent_indexing_failures:number;active_index:string;retrieval_latency_ms:number|null;reranker_latency_ms:number|null;cache_hit_rate:number|null;embedding:{model:string;revision:string};health:{status:string;components:Array<{name:string;status:string}>}};
+export function Dashboard(){const q=useQuery({queryKey:["dashboard"],queryFn:()=>api<DashboardSnapshot>("/v1/admin/dashboard"),refetchInterval:10000});if(q.isLoading)return <Loading/>;if(q.error)return <p role="alert">{q.error.message}</p>;const d=q.data;return <><header><div><h1>Dashboard</h1><p className="lede">Current service identity, dependency health, and bounded operational indicators.</p></div></header>{d&&<><section className="cards"><article><span>Documents</span><strong>{d.documents.toLocaleString()}</strong></article><article><span>Chunks</span><strong>{d.chunks.toLocaleString()}</strong></article><article><span>Indexing failures (24h)</span><strong>{d.recent_indexing_failures}</strong></article><article><span>Retrieval latency</span><strong>{d.retrieval_latency_ms==null?"No samples":`${d.retrieval_latency_ms} ms`}</strong></article><article><span>Reranker latency</span><strong>{d.reranker_latency_ms==null?"No samples":`${d.reranker_latency_ms} ms`}</strong></article><article><span>Cache hit rate</span><strong>{d.cache_hit_rate==null?"No samples":`${(d.cache_hit_rate*100).toFixed(1)}%`}</strong></article></section><section className="cards"><article><span>Overall health</span><strong>{d.health.status}</strong></article><article><span>Embedding model</span><strong>{d.embedding.model}</strong><small>{d.embedding.revision}</small></article><article><span>Active index</span><strong>{d.active_index}</strong></article>{d.health.components.map(component=><article key={component.name}><span>{component.name}</span><strong>{component.status}</strong></article>)}</section></>}</>}
 export function Projects(){const client=useQueryClient();const q=useQuery({queryKey:["projects"],queryFn:()=>api<any[]>("/v1/admin/projects")});async function create(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);await api("/v1/admin/projects",{method:"POST",body:JSON.stringify(Object.fromEntries(f))});client.invalidateQueries({queryKey:["projects"]});e.currentTarget.reset()}return <><h1>Projects</h1><form className="inline" onSubmit={create}><input name="tenant_id" placeholder="Tenant UUID" required/><input name="slug" placeholder="project-slug" required/><input name="name" placeholder="Project name" required/><button>Create</button></form>{q.isLoading?<Loading/>:<table><thead><tr><th>Name</th><th>Slug</th><th>Status</th></tr></thead><tbody>{q.data?.map(p=><tr key={p.id}><td>{p.name}</td><td>{p.slug}</td><td>{p.enabled?"Enabled":"Disabled"}</td></tr>)}</tbody></table>}</>}
 export function Collections(){const q=useQuery({queryKey:["collections"],queryFn:()=>api<any[]>("/v1/admin/collections")});return <><h1>Collections</h1>{q.isLoading?<Loading/>:<table><thead><tr><th>Name</th><th>Project</th><th>Strategy</th></tr></thead><tbody>{q.data?.map(c=><tr key={c.id}><td>{c.name}</td><td>{c.project_id}</td><td>{c.settings.chunking_strategy??"recursive_text"}</td></tr>)}</tbody></table>}</>}
 
@@ -28,6 +29,7 @@ export function documentQuery(tenantId:string, projectId:string, collection:stri
 }
 
 export function Documents() {
+  const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const projectId = params.get("project_id") ?? "";
   const collection = params.get("collection") ?? "";
@@ -46,6 +48,13 @@ export function Documents() {
     queryFn:()=>api<DocumentChunk[]>(`/v1/admin/documents/${documentId}/chunks?${new URLSearchParams({tenant_id:selectedDocument?.tenant_id ?? "",project_id:selectedDocument?.project_id ?? "",collection:selectedDocument?.collection ?? "",limit:"100"})}`),
     enabled:Boolean(documentId && selectedDocument),
   });
+  const action = useMutation({
+    mutationFn: ({document,action}:{document:DocumentItem; action:"reindex"|"delete"}) => {
+      const scope=new URLSearchParams({tenant_id:document.tenant_id,project_id:document.project_id,collection:document.collection});
+      return api(`/v1/admin/documents/${document.id}/${action}?${scope}`,{method:"POST",body:JSON.stringify({confirm:true})});
+    },
+    onSuccess:()=>client.invalidateQueries({queryKey:["documents"]}),
+  });
 
   function filter(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +65,10 @@ export function Documents() {
     setParams(next);
   }
   const availableCollections = collections.data?.filter(item=>item.project_id===projectId) ?? [];
+  async function act(document:DocumentItem, operation:"reindex"|"delete") {
+    if (!window.confirm(`${operation === "reindex" ? "Reindex" : "Delete"} document ${document.external_document_id}?`)) return;
+    await action.mutateAsync({document,action:operation});
+  }
 
   return <>
     <header><div><h1>Documents</h1><p className="lede">Tenant-scoped document inventory and indexed chunk inspection.</p></div></header>
@@ -65,11 +78,11 @@ export function Documents() {
       <button>Load documents</button>
     </form>
     {!projectId && <div className="empty">Select a project to load its authorized documents.</div>}
-    {documents.isLoading && <Loading/>}{documents.error && <p role="alert">{documents.error.message}</p>}
+    {documents.isLoading && <Loading/>}{(documents.error||action.error) && <p role="alert">{(documents.error??action.error)?.message}</p>}
     {projectId && documents.data?.length===0 && <div className="empty">No documents match this scope.</div>}
     {!!documents.data?.length && <div className="split-view"><table><thead><tr><th>External ID</th><th>Collection</th><th>Version</th><th>Metadata</th><th>Actions</th></tr></thead><tbody>{documents.data.map(item=><tr key={item.id} className={item.id===documentId?"selected-row":undefined}>
       <td>{item.external_document_id}<small className="resource-id">{item.id}</small></td><td>{item.collection}</td><td>{item.current_version}</td><td>{Object.keys(item.metadata).length} fields</td>
-      <td><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("document",item.id);setParams(next)}}>Chunks</button></td>
+      <td><div className="actions"><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("document",item.id);setParams(next)}}>Chunks</button><button disabled={action.isPending} onClick={()=>act(item,"reindex")}>Reindex</button><button className="danger" disabled={action.isPending} onClick={()=>act(item,"delete")}>Delete</button></div></td>
     </tr>)}</tbody></table>
       {documentId && <aside className="detail-panel"><div className="setting-heading"><h2>Document chunks</h2><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.delete("document");setParams(next)}}>Close</button></div>
         {chunks.isLoading&&<Loading/>}{chunks.error&&<p role="alert">{chunks.error.message}</p>}{chunks.data?.length===0&&<div className="empty">No chunks available.</div>}
@@ -80,16 +93,28 @@ export function Documents() {
 }
 
 type EvaluationDatasetItem = {id:string; tenant_id:string; project_id:string; name:string; version:number; collections:string[]; case_count:number};
-type EvaluationRunItem = {id:string; tenant_id:string; project_id:string; dataset_id:string; status:string; configuration:Record<string,unknown>; results?:Array<Record<string,unknown>>};
+type EvaluationRunItem = {id:string; tenant_id:string; project_id:string; dataset_id:string; status:string; configuration:Record<string,unknown>; metrics_before_reranking?:Record<string,number>; metrics_after_reranking?:Record<string,number>; reranker_uplift?:Record<string,number>; results?:Array<Record<string,unknown>>};
+type EvaluationComparison = {baseline:{id:string;configuration:Record<string,unknown>};candidate:{id:string;configuration:Record<string,unknown>};comparison:Array<{metric:string;baseline:number;candidate:number;delta:number}>};
 
 export const evaluationScope = (tenantId:string, projectId:string) =>
   new URLSearchParams({tenant_id:tenantId, project_id:projectId}).toString();
+
+function MetricComparison({run}:{run:EvaluationRunItem}) {
+  const before=run.metrics_before_reranking??{};
+  const after=run.metrics_after_reranking??{};
+  const uplift=run.reranker_uplift??{};
+  const names=[...new Set([...Object.keys(before),...Object.keys(after)])].filter(name=>!name.includes("latency")&&!name.includes("violations")).sort();
+  if (!names.length) return <div className="empty">Metrics are available after the run completes.</div>;
+  return <table><thead><tr><th>Metric</th><th>Before</th><th>After</th><th>Uplift</th></tr></thead><tbody>{names.map(name=><tr key={name}><td>{name}</td><td>{(before[name]??0).toFixed(4)}</td><td>{(after[name]??0).toFixed(4)}</td><td>{(uplift[name]??0).toFixed(4)}</td></tr>)}</tbody></table>;
+}
 
 export function Evaluation() {
   const client = useQueryClient();
   const [params,setParams] = useSearchParams();
   const projectId = params.get("project_id") ?? "";
   const runId = params.get("run") ?? "";
+  const [baselineRunId,setBaselineRunId] = useState("");
+  const [candidateRunId,setCandidateRunId] = useState("");
   const projects = useQuery({queryKey:["projects"],queryFn:()=>api<ProjectOption[]>("/v1/admin/projects")});
   const project = projects.data?.find(item=>item.id===projectId);
   const scope = project ? evaluationScope(project.tenant_id,project.id) : "";
@@ -99,6 +124,9 @@ export function Evaluation() {
   const start = useMutation({
     mutationFn:(datasetId:string)=>api(`/v1/admin/evaluation/runs?${scope}`,{method:"POST",body:JSON.stringify({dataset_id:datasetId})}),
     onSuccess:()=>client.invalidateQueries({queryKey:["evaluation-runs"]}),
+  });
+  const compare = useMutation({
+    mutationFn:()=>api<EvaluationComparison>(`/v1/admin/evaluation/compare?${scope}`,{method:"POST",body:JSON.stringify({baseline_run_id:baselineRunId,candidate_run_id:candidateRunId})}),
   });
   async function run(dataset:EvaluationDatasetItem) {
     if (!window.confirm(`Run evaluation dataset ${dataset.name} v${dataset.version}?`)) return;
@@ -111,7 +139,7 @@ export function Evaluation() {
       <label>Project<select value={projectId} onChange={event=>chooseProject(event.target.value)}><option value="">Select a project</option>{projects.data?.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     </header>
     {!projectId&&<div className="empty">Select a project to inspect evaluation datasets and runs.</div>}
-    {(datasets.isLoading||runs.isLoading)&&<Loading/>}{(datasets.error||runs.error||detail.error||start.error)&&<p role="alert">{(datasets.error??runs.error??detail.error??start.error)?.message}</p>}
+    {(datasets.isLoading||runs.isLoading)&&<Loading/>}{(datasets.error||runs.error||detail.error||start.error||compare.error)&&<p role="alert">{(datasets.error??runs.error??detail.error??start.error??compare.error)?.message}</p>}
     {projectId&&<div className="evaluation-grid"><section><h2>Datasets</h2>{datasets.data?.length===0&&<div className="empty">No evaluation datasets.</div>}{datasets.data?.map(dataset=><article className="evaluation-item" key={dataset.id}>
       <div><h3>{dataset.name} <span className="badge">v{dataset.version}</span></h3><small>{dataset.collections.join(", ")} · {dataset.case_count} cases</small></div>
       <button disabled={start.isPending} onClick={()=>run(dataset)}>Run evaluation</button>
@@ -119,9 +147,16 @@ export function Evaluation() {
       <div><span className={`badge status-${item.status}`}>{item.status}</span><small className="resource-id">{item.id}</small></div>
       <button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("run",item.id);setParams(next)}}>Results</button>
     </article>)}</section></div>}
+    {projectId&&<section className="result-panel"><h2>Compare completed runs</h2><form className="comparison-controls" onSubmit={event=>{event.preventDefault();compare.mutate()}}>
+      <label>Baseline<select value={baselineRunId} onChange={event=>setBaselineRunId(event.target.value)} required><option value="">Select baseline</option>{runs.data?.filter(item=>item.status==="completed").map(item=><option key={item.id} value={item.id}>{item.id}</option>)}</select></label>
+      <label>Candidate<select value={candidateRunId} onChange={event=>setCandidateRunId(event.target.value)} required><option value="">Select candidate</option>{runs.data?.filter(item=>item.status==="completed").map(item=><option key={item.id} value={item.id}>{item.id}</option>)}</select></label>
+      <button disabled={compare.isPending||!baselineRunId||!candidateRunId}>Compare</button>
+    </form>{compare.data&&<><table><thead><tr><th>Metric</th><th>Baseline</th><th>Candidate</th><th>Delta</th></tr></thead><tbody>{compare.data.comparison.map(row=><tr key={row.metric}><td>{row.metric}</td><td>{row.baseline.toFixed(4)}</td><td>{row.candidate.toFixed(4)}</td><td className={row.delta<0?"metric-regression":"metric-improvement"}>{row.delta>=0?"+":""}{row.delta.toFixed(4)}</td></tr>)}</tbody></table><details><summary>Configurations</summary><pre>{JSON.stringify({baseline:compare.data.baseline,candidate:compare.data.candidate},null,2)}</pre></details></>}
+    </section>}
     {runId&&detail.data&&<aside className="result-panel"><div className="setting-heading"><div><h2>Run results</h2><small className="mono">{detail.data.id}</small></div><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.delete("run");setParams(next)}}>Close</button></div>
       <dl><dt>Status</dt><dd>{detail.data.status}</dd><dt>Dataset</dt><dd className="mono">{detail.data.dataset_id}</dd><dt>Result cases</dt><dd>{detail.data.results?.length??0}</dd></dl>
-      <pre>{JSON.stringify(detail.data.results??[],null,2)}</pre>
+      <MetricComparison run={detail.data}/>
+      <details><summary>Case-level results</summary><pre>{JSON.stringify(detail.data.results??[],null,2)}</pre></details>
     </aside>}
   </>;
 }
@@ -173,7 +208,46 @@ export function Feedback() {
     </tr>)}</tbody></table>}
   </>;
 }
-export function SearchPlayground(){const [result,setResult]=useState<any>();async function run(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setResult(await api("/v1/admin/retrieval/search",{method:"POST",body:JSON.stringify({project_id:f.get("project_id"),collections:String(f.get("collections")).split(","),query:f.get("query"),include_trace:true})}))}return <><h1>Search Playground</h1><form onSubmit={run}><input name="project_id" placeholder="Project UUID" required/><input name="collections" placeholder="Collection names" required/><textarea name="query" placeholder="Ask a retrieval question" required/><button>Search</button></form>{result&&<pre>{JSON.stringify(result,null,2)}</pre>}</>}
+type PlaygroundResult = {
+  request_id:string;
+  results:Array<Record<string,any>>;
+  trace:Record<string,any>;
+};
+
+function RankingTable({title,items,score}:{title:string;items:Array<Record<string,any>>;score:string}) {
+  return <section className="result-panel"><h2>{title}</h2>{items.length===0?<p className="empty">No candidates.</p>:<table><thead><tr><th>Rank</th><th>Document / chunk</th><th>Score</th><th>Preview</th></tr></thead><tbody>{items.map((item,index)=><tr key={`${title}-${item.chunk_id}`}><td>{item.final_rank??index+1}</td><td><span className="mono">{item.document_id}</span><br/><small className="mono">{item.chunk_id}</small></td><td>{typeof item[score]==="number"?item[score].toFixed(5):"—"}</td><td>{String(item.content??"").slice(0,180)}</td></tr>)}</tbody></table>}</section>
+}
+
+export function SearchPlayground(){
+  const [result,setResult]=useState<PlaygroundResult>();
+  const [error,setError]=useState<string>();
+  async function run(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();
+    setError(undefined);
+    const f=new FormData(e.currentTarget);
+    const topK=Number(f.get("top_k")??20);
+    try {
+      setResult(await api<PlaygroundResult>("/v1/admin/retrieval/search",{method:"POST",body:JSON.stringify({
+        project_id:f.get("project_id"),
+        collections:String(f.get("collections")).split(",").map(value=>value.trim()).filter(Boolean),
+        query:f.get("query"),
+        mode:f.get("mode"),
+        vector_top_k:topK,
+        bm25_top_k:topK,
+        fusion_top_k:topK,
+        use_reranker:f.get("use_reranker")==="on",
+        rerank_top_k:Number(f.get("rerank_top_k")??8),
+        include_trace:true,
+      })}));
+    } catch (value) { setError(value instanceof Error?value.message:"Search failed"); }
+  }
+  const results=result?.results??[];
+  const dense=[...results].filter(item=>typeof item.vector_score==="number").sort((a,b)=>b.vector_score-a.vector_score);
+  const lexical=[...results].filter(item=>typeof item.bm25_score==="number").sort((a,b)=>b.bm25_score-a.bm25_score);
+  const fusion=[...results].sort((a,b)=>(b.fusion_score??0)-(a.fusion_score??0));
+  const reranked=[...results].filter(item=>typeof item.reranker_score==="number").sort((a,b)=>b.reranker_score-a.reranker_score);
+  return <><header><div><h1>Search Playground</h1><p className="lede">Compare retrieval stages and degraded fallbacks with one scoped query.</p></div></header><form onSubmit={run} className="filters"><input name="project_id" placeholder="Project UUID" required/><input name="collections" placeholder="Collection names" required/><select name="mode" aria-label="Retrieval mode" defaultValue="hybrid"><option value="lexical">Lexical</option><option value="dense">Dense</option><option value="hybrid">Hybrid</option></select><label>Candidate top K<input name="top_k" type="number" min="1" max="200" defaultValue="20"/></label><label>Final top K<input name="rerank_top_k" type="number" min="1" max="50" defaultValue="8"/></label><label><input name="use_reranker" type="checkbox" defaultChecked/> External reranker</label><textarea name="query" placeholder="Ask a retrieval question" required/><button>Search</button></form>{error&&<p role="alert">{error}</p>}{result&&<><section className="cards"><article><span>Requested mode</span><strong>{result.trace.requested_mode}</strong></article><article><span>Effective mode</span><strong>{result.trace.effective_mode}</strong></article><article><span>Total latency</span><strong>{result.trace.latency_ms} ms</strong></article><article><span>Reranker</span><strong>{result.trace.reranker_degraded?"Degraded":result.trace.reranker_used?"Used":"Skipped"}</strong></article></section><RankingTable title="Dense ranking" items={dense} score="vector_score"/><RankingTable title="Lexical ranking" items={lexical} score="bm25_score"/><RankingTable title="Fusion ranking" items={fusion} score="fusion_score"/><RankingTable title="Reranker ranking" items={reranked} score="reranker_score"/><RankingTable title="Final selected results" items={results} score="final_score"/><details><summary>Trace and stage timings</summary><pre>{JSON.stringify(result.trace,null,2)}</pre></details></>}</>;
+}
 export function SystemHealth(){const q=useQuery({queryKey:["health"],queryFn:()=>api<any>("/v1/admin/system/health"),refetchInterval:10000});return <><h1>System Health</h1>{q.isLoading?<Loading/>:<section className="cards">{q.data?.components.map((c:any)=><article key={c.name}><span>{c.name}</span><strong className="healthy">{c.status}</strong></article>)}</section>}</>}
 
 type SettingItem = {
@@ -207,6 +281,12 @@ export function Settings() {
       }),
     onSuccess: (data) => client.setQueryData(["settings"], data),
   });
+  const cacheClear = useMutation({
+    mutationFn: () => api<{status: string; deleted_keys: number}>("/v1/admin/cache/clear", {
+      method: "POST",
+      body: JSON.stringify({confirm: true}),
+    }),
+  });
 
   if (query.isLoading) return <Loading />;
   if (query.error) return <p role="alert">{query.error.message}</p>;
@@ -216,6 +296,10 @@ export function Settings() {
     const raw = new FormData(event.currentTarget).get("value");
     if (raw === null) return;
     await mutation.mutateAsync({[setting.key]: settingValue(raw, setting.value)});
+  }
+
+  function clearCache() {
+    if (window.confirm("Clear only the versioned RAG cache namespace?")) cacheClear.mutate();
   }
 
   return <>
@@ -241,6 +325,12 @@ export function Settings() {
         </form>
       </article>)}
     </section>
+    <article className="setting">
+      <div className="setting-heading"><div><strong>RAG cache</strong><p>Query embeddings are versioned by model identity. Clearing does not flush Celery or unrelated Redis keys.</p></div></div>
+      <div className="setting-footer"><small>Use after an emergency cache investigation; normal model changes are isolated automatically.</small><button className="danger" disabled={cacheClear.isPending} onClick={clearCache}>Clear RAG cache</button></div>
+      {cacheClear.data && <p role="status">Cleared {cacheClear.data.deleted_keys} cache keys.</p>}
+      {cacheClear.error && <p role="alert">{cacheClear.error.message}</p>}
+    </article>
   </>;
 }
 
@@ -332,6 +422,11 @@ export function Indexing() {
     queryFn: () => api<IndexingJob[]>(`/v1/admin/indexing/jobs?${queryString}`),
     refetchInterval: 10000,
   });
+  const profileQuery = useQuery({
+    queryKey: ["embedding-profile"],
+    queryFn: () => api<EmbeddingProfile>("/v1/admin/models/embeddings"),
+    refetchInterval: 10000,
+  });
   const mutation = useMutation({
     mutationFn: ({id, action}:{id:string; action:"retry"|"cancel"}) =>
       api(`/v1/admin/indexing/jobs/${id}/${action}`, {method: "POST"}),
@@ -349,6 +444,7 @@ export function Indexing() {
         <option value="">All statuses</option><option value="queued">Queued</option><option value="processing">Processing</option><option value="failed">Failed</option><option value="dead_letter">Dead letter</option><option value="completed">Completed</option>
       </select></label>
     </header>
+    {profileQuery.data && <section className="cards"><article><span>Active index</span><strong>{profileQuery.data.index_version}</strong></article><article><span>Embedding model</span><strong>{profileQuery.data.model}</strong><small>{profileQuery.data.revision}</small></article><article><span>Dimension</span><strong>{profileQuery.data.dimension ?? profileQuery.data.expected_dimension}</strong></article><article><span>Chunker</span><strong>{profileQuery.data.chunker_version}</strong></article></section>}
     {mutation.error && <p role="alert">{mutation.error.message}</p>}
     {query.isLoading && <Loading/>}
     {query.error && <p role="alert">{query.error.message}</p>}
@@ -421,9 +517,14 @@ export function RetrievalTraces() {
 type EmbeddingProfile = {
   status: string;
   model: string;
+  backend: string;
+  revision: string;
+  normalization: string;
   device: string | null;
   dimension: number | null;
   expected_dimension: number;
+  chunker_version: string;
+  index_version: string;
   compatible: boolean;
 };
 
@@ -457,6 +558,7 @@ export function Models() {
       <article><span>Compatibility</span><strong className={profile.compatible?"healthy":"unhealthy"}>{embeddingCompatibility(profile)}</strong></article>
       <article><span>Device</span><strong>{profile.device ?? "Unknown"}</strong></article>
       <article><span>Dimension</span><strong>{profile.dimension ?? "—"} / {profile.expected_dimension}</strong></article>
+      <article><span>Index</span><strong>{profile.index_version}</strong><small>{profile.revision}</small></article>
     </section>
     <article className="model-profile"><div><span>Active embedding model</span><h2>{profile.model}</h2></div>
       <p>Reindexing preserves active jobs and requires a compatible worker heartbeat.</p>
