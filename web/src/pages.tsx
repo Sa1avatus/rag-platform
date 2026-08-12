@@ -17,6 +17,10 @@ type DocumentItem = {
   current_version: number;
   lock_version: number;
   metadata: Record<string, unknown>;
+  chunk_count: number;
+  title: string;
+  content: string;
+  document_type: string;
 };
 type DocumentChunk = {id:string; chunk_index:number; chunk_type:string; content:string; token_count:number; language:string};
 type ProjectOption = {id:string; tenant_id:string; name:string};
@@ -80,9 +84,14 @@ export function Documents() {
     {!projectId && <div className="empty">Select a project to load its authorized documents.</div>}
     {documents.isLoading && <Loading/>}{(documents.error||action.error) && <p role="alert">{(documents.error??action.error)?.message}</p>}
     {projectId && documents.data?.length===0 && <div className="empty">No documents match this scope.</div>}
-    {!!documents.data?.length && <div className="split-view"><table><thead><tr><th>External ID</th><th>Collection</th><th>Version</th><th>Metadata</th><th>Actions</th></tr></thead><tbody>{documents.data.map(item=><tr key={item.id} className={item.id===documentId?"selected-row":undefined}>
-      <td>{item.external_document_id}<small className="resource-id">{item.id}</small></td><td>{item.collection}</td><td>{item.current_version}</td><td>{Object.keys(item.metadata).length} fields</td>
-      <td><div className="actions"><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("document",item.id);setParams(next)}}>Chunks</button><button disabled={action.isPending} onClick={()=>act(item,"reindex")}>Reindex</button><button className="danger" disabled={action.isPending} onClick={()=>act(item,"delete")}>Delete</button></div></td>
+    {!!documents.data?.length && <div className="split-view"><table><thead><tr><th>External ID</th><th>Title</th><th>Collection</th><th>Chunks</th><th>Metadata</th><th>Content</th><th>Actions</th></tr></thead><tbody>{documents.data.map(item=><tr key={item.id} className={item.id===documentId?"selected-row":undefined}>
+      <td>{item.external_document_id}<small className="resource-id">{item.id}</small></td>
+      <td>{item.title || "—"}{item.document_type && <small>{item.document_type}</small>}</td>
+      <td>{item.collection}</td>
+      <td>{item.chunk_count}</td>
+      <td title={JSON.stringify(item.metadata, null, 2)} style={{cursor:'help',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{Object.entries(item.metadata).map(([k,v])=>`${k}: ${String(v).slice(0,40)}`).join(', ')}</td>
+      <td style={{maxWidth:300}}>{item.content ? <details><summary>{item.content.slice(0,80)}…</summary><pre style={{whiteSpace:'pre-wrap',maxHeight:400,overflow:'auto',fontSize:12}}>{item.content}</pre></details> : "—"}</td>
+      <td><div className="actions"><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.set("document",item.id);setParams(next)}}>Chunks ({item.chunk_count})</button><button disabled={action.isPending} onClick={()=>act(item,"reindex")}>Reindex</button><button className="danger" disabled={action.isPending} onClick={()=>act(item,"delete")}>Delete</button></div></td>
     </tr>)}</tbody></table>
       {documentId && <aside className="detail-panel"><div className="setting-heading"><h2>Document chunks</h2><button className="quiet" onClick={()=>{const next=new URLSearchParams(params);next.delete("document");setParams(next)}}>Close</button></div>
         {chunks.isLoading&&<Loading/>}{chunks.error&&<p role="alert">{chunks.error.message}</p>}{chunks.data?.length===0&&<div className="empty">No chunks available.</div>}

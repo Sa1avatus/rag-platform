@@ -178,6 +178,32 @@ async def admin_documents(
             .offset(offset)
         )
     ).all()
+    doc_ids = [row.id for row in rows]
+    # Chunk counts per document
+    chunk_counts: dict[uuid.UUID, int] = {}
+    if doc_ids:
+        count_rows = (
+            await session.execute(
+                select(Chunk.document_id, func.count(Chunk.id))
+                .where(Chunk.document_id.in_(doc_ids))
+                .group_by(Chunk.document_id)
+            )
+        ).all()
+        chunk_counts = {row[0]: row[1] for row in count_rows}
+    # Latest version content per document
+    version_map: dict[uuid.UUID, DocumentVersion] = {}
+    if doc_ids:
+        from sqlalchemy import and_
+        latest_versions = (
+            await session.scalars(
+                select(DocumentVersion)
+                .where(DocumentVersion.document_id.in_(doc_ids))
+                .order_by(DocumentVersion.document_id, DocumentVersion.version.desc())
+            )
+        ).all()
+        for v in latest_versions:
+            if v.document_id not in version_map:
+                version_map[v.document_id] = v
     return [
         {
             "id": row.id,
@@ -188,6 +214,10 @@ async def admin_documents(
             "current_version": row.current_version,
             "lock_version": row.lock_version,
             "metadata": row.metadata_,
+            "chunk_count": chunk_counts.get(row.id, 0),
+            "title": (v := version_map.get(row.id)) and v.title or "",
+            "content": (v := version_map.get(row.id)) and v.content[:2000] or "",
+            "document_type": (v := version_map.get(row.id)) and v.document_type or "",
         }
         for row in rows
     ]
