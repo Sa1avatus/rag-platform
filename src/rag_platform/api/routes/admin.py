@@ -85,6 +85,14 @@ def _audit(
     )
 
 
+@router.get("/tenants")
+async def list_tenants(
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, object]]:
+    rows = (await session.scalars(select(Tenant).order_by(Tenant.name))).all()
+    return [{"id": row.id, "name": row.name} for row in rows]
+
+
 @router.post("/tenants", status_code=201)
 async def create_tenant(
     data: TenantCreate,
@@ -110,6 +118,9 @@ async def create_project(
     data: ProjectCreate,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, object]:
+    tenant = await session.scalar(select(Tenant).where(Tenant.id == data.tenant_id))
+    if tenant is None:
+        raise HTTPException(404, "tenant not found")
     row = Project(**data.model_dump())
     session.add(row)
     await session.flush()

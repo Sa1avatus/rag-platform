@@ -23,7 +23,7 @@ services:
       rag-migrate: {condition: service_completed_successfully}
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
-    volumes: ["rag_prometheus:/tmp/prometheus-multiproc"]
+    tmpfs: ["/tmp/prometheus-multiproc:uid=10001,gid=10001,mode=1777"]
     healthcheck: {test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8100/health/live')"], interval: 10s, timeout: 3s, retries: 10}
     restart: unless-stopped
     deploy: {resources: {limits: {memory: 1G}}}
@@ -38,7 +38,8 @@ services:
       rag-postgres: {condition: service_healthy}
       rag-redis: {condition: service_healthy}
       rag-minio: {condition: service_healthy}
-    volumes: ["rag_model_cache:/home/rag/.cache/huggingface", "rag_prometheus:/tmp/prometheus-multiproc"]
+    volumes: ["rag_model_cache:/home/rag/.cache/huggingface"]
+    tmpfs: ["/tmp/prometheus-multiproc:uid=10001,gid=10001,mode=1777"]
     environment:
       PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus-multiproc
     restart: unless-stopped
@@ -94,4 +95,4 @@ services:
     volumes: ["rag_minio:/data"]
     healthcheck: {test: ["CMD", "mc", "ready", "local"], interval: 5s, timeout: 3s, retries: 20}
     restart: unless-stopped
-volumes: {rag_postgres: {}, rag_opensearch: {}, rag_redis: {}, rag_minio: {}, rag_model_cache: {}, rag_prometheus: {}}
+volumes: {rag_postgres: {}, rag_opensearch: {}, rag_redis: {}, rag_minio: {}, rag_model_cache: {}}

@@ -36,6 +36,7 @@ from rag_platform.db.models import (
     Project,
     RetrievalFeedback,
     RetrievalRequest,
+    Tenant,
 )
 
 
@@ -82,7 +83,8 @@ class FakeSession:
 @pytest.mark.asyncio
 async def test_create_and_list_projects() -> None:
     tenant_id = uuid.uuid4()
-    session = FakeSession()
+    tenant = Tenant(id=tenant_id, name="test-tenant")
+    session = FakeSession(scalar_values=[tenant])
     created = await admin.create_project(
         ProjectCreate(tenant_id=tenant_id, slug="docs", name="Documentation"), session
     )
