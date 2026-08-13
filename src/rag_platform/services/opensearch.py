@@ -35,6 +35,7 @@ async def ensure_index(search_client: AsyncOpenSearch) -> None:
                 "properties": {
                     "tenant_id": {"type": "keyword"},
                     "project_id": {"type": "keyword"},
+                    "owner_user_id": {"type": "keyword"},
                     "collection": {"type": "keyword"},
                     "document_id": {"type": "keyword"},
                     "chunk_id": {"type": "keyword"},
@@ -66,6 +67,7 @@ async def index_chunks(documents: list[dict[str, Any]]) -> None:
 
 async def bm25_search(
     tenant_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
     project_id: uuid.UUID,
     collections: list[str],
     query: str,
@@ -74,6 +76,7 @@ async def bm25_search(
 ) -> list[tuple[uuid.UUID, float]]:
     clauses: list[dict[str, Any]] = [
         {"term": {"tenant_id": str(tenant_id)}},
+        {"term": {"owner_user_id": str(owner_user_id)}},
         {"term": {"project_id": str(project_id)}},
         {"terms": {"collection": collections}},
     ]
@@ -103,6 +106,7 @@ async def bm25_search(
 
 async def delete_document_chunks(
     tenant_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
     project_id: uuid.UUID,
     document_id: uuid.UUID,
 ) -> None:
@@ -117,6 +121,7 @@ async def delete_document_chunks(
                     "bool": {
                         "filter": [
                             {"term": {"tenant_id": str(tenant_id)}},
+                            {"term": {"owner_user_id": str(owner_user_id)}},
                             {"term": {"project_id": str(project_id)}},
                             {"term": {"document_id": str(document_id)}},
                         ]

@@ -53,6 +53,7 @@ async def evaluate_run(run_id: uuid.UUID) -> None:
             ).all()
             principal = Principal(
                 dataset.tenant_id,
+                uuid.UUID(int=0),
                 frozenset({dataset.project_id}),
                 frozenset(collections),
                 frozenset({"retrieval:search", "admin:evaluate"}),

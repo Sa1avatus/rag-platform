@@ -49,9 +49,11 @@ class ScalarRows:
 
 
 class FakeSession:
-    def __init__(self, *, scalar_values: list[Any] | None = None, rows: list[object] | None = None):
+    def __init__(self, *, scalar_values: list[Any] | None = None, rows: list[object] | None = None, execute_rows: list[object] | None = None, scalars_values: list[list[object]] | None = None):
         self.scalar_values = list(scalar_values or [])
         self.rows = rows or []
+        self.execute_rows = execute_rows or []
+        self._scalars_values = list(scalars_values or [])
         self.added: list[object] = []
         self.commits = 0
 
@@ -74,10 +76,15 @@ class FakeSession:
         return self.scalar_values.pop(0)
 
     async def scalars(self, statement: object) -> ScalarRows:
+        if self._scalars_values:
+            return ScalarRows(self._scalars_values.pop(0))
         return ScalarRows(self.rows)
 
     async def get(self, model: object, identifier: uuid.UUID) -> Any:
         return self.scalar_values.pop(0)
+
+    async def execute(self, statement: object) -> ScalarRows:
+        return ScalarRows(self.execute_rows)
 
 
 @pytest.mark.asyncio
@@ -111,8 +118,23 @@ async def test_admin_documents_and_chunks_are_explicitly_scoped() -> None:
         lock_version=2,
         metadata_={"source": "test"},
     )
+    version = DocumentVersion(
+        id=uuid.uuid4(),
+        document_id=document_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        collection="manuals",
+        external_document_id="guide",
+        document_type="text",
+        title="Guide",
+        content="Guide content here",
+        content_hash="hash",
+        version=2,
+        is_current=True,
+    )
     listed = await admin.admin_documents(
-        tenant_id, project_id, "manuals", 100, 0, FakeSession(rows=[document])
+        tenant_id, project_id, "manuals", None, 100, 0,
+        FakeSession(scalars_values=[[document], [version]])
     )
     assert listed[0]["tenant_id"] == tenant_id
     assert listed[0]["collection"] == "manuals"
@@ -139,6 +161,7 @@ async def test_admin_documents_and_chunks_are_explicitly_scoped() -> None:
         tenant_id,
         project_id,
         "manuals",
+        None,
         100,
         0,
         FakeSession(scalar_values=[document], rows=[chunk]),

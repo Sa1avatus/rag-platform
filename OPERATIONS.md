@@ -34,6 +34,14 @@ services if migration fails. `docker compose ps --all` shows the completed migra
 `Exited (0)`. API, worker, web, PostgreSQL, Redis, OpenSearch, and MinIO expose container
 healthchecks.
 
+Migration `0004` adds `owner_user_id` (UUID, NOT NULL) to `documents`, `document_versions`, and
+`chunks`. Existing rows are backfilled with the zero sentinel UUID
+(`00000000-0000-0000-0000-000000000000`). The unique constraint on `documents` is updated to
+include `owner_user_id`. After migration, every service API request must carry the
+`X-Owner-User-Id` header. OpenSearch documents are not automatically reindexed; run
+`POST /v1/admin/collections/{id}/reindex` for each collection that needs the `owner_user_id`
+field in the BM25 index.
+
 Use `make up`, `make migrate`, `make test`, `make lint`, and `make down`. Back up PostgreSQL with
 `pg_dump --format=custom` and MinIO with versioned object replication. Restore PostgreSQL and MinIO
 before replaying the PostgreSQL-authoritative chunks into a fresh versioned OpenSearch index; switch

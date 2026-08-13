@@ -20,10 +20,11 @@ def test_content_normalization_is_deterministic() -> None:
 def test_domain_ids_are_stable_and_version_aware() -> None:
     tenant_id = uuid.uuid4()
     project_id = uuid.uuid4()
-    document_id = stable_document_id(tenant_id, project_id, "jobs", "job-123")
+    owner_id = uuid.uuid4()
+    document_id = stable_document_id(tenant_id, project_id, "jobs", owner_id, "job-123")
 
-    assert document_id == stable_document_id(tenant_id, project_id, "jobs", "job-123")
-    assert document_id != stable_document_id(tenant_id, project_id, "jobs", "job-456")
+    assert document_id == stable_document_id(tenant_id, project_id, "jobs", owner_id, "job-123")
+    assert document_id != stable_document_id(tenant_id, project_id, "jobs", owner_id, "job-456")
 
     digest = content_hash("content")
     version_id = stable_version_id(document_id, 1, digest)

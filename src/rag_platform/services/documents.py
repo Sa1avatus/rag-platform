@@ -43,6 +43,7 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
             DocumentVersion.tenant_id == who.tenant_id,
             DocumentVersion.project_id == data.project_id,
             DocumentVersion.collection == data.collection,
+            DocumentVersion.owner_user_id == who.owner_user_id,
             DocumentVersion.external_document_id == data.external_document_id,
             DocumentVersion.version == data.version,
         )
@@ -59,6 +60,7 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
             Document.tenant_id == who.tenant_id,
             Document.project_id == data.project_id,
             Document.collection == data.collection,
+            Document.owner_user_id == who.owner_user_id,
             Document.external_document_id == data.external_document_id,
         )
     )
@@ -68,10 +70,12 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
                 who.tenant_id,
                 data.project_id,
                 data.collection,
+                who.owner_user_id,
                 data.external_document_id,
             ),
             tenant_id=who.tenant_id,
             project_id=data.project_id,
+            owner_user_id=who.owner_user_id,
             collection=data.collection,
             external_document_id=data.external_document_id,
             current_version=data.version,
@@ -94,6 +98,7 @@ async def ingest(session: AsyncSession, who: Principal, data: DocumentCreate) ->
         document_id=document.id,
         tenant_id=who.tenant_id,
         project_id=data.project_id,
+        owner_user_id=who.owner_user_id,
         collection=data.collection,
         external_document_id=data.external_document_id,
         document_type=data.document_type,

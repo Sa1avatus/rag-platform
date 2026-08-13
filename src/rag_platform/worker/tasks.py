@@ -115,6 +115,7 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
                     document_version_id=version.id,
                     tenant_id=version.tenant_id,
                     project_id=version.project_id,
+                    owner_user_id=version.owner_user_id,
                     collection=version.collection,
                     chunk_index=draft.chunk_index,
                     content=draft.content,
@@ -157,6 +158,7 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
                 {
                     "tenant_id": str(version.tenant_id),
                     "project_id": str(version.project_id),
+                    "owner_user_id": str(version.owner_user_id),
                     "collection": version.collection,
                     "document_id": str(chunk.document_id),
                     "chunk_id": str(chunk.id),
@@ -236,6 +238,7 @@ async def delete_derivatives(document_id: uuid.UUID, job_id: uuid.UUID) -> None:
         try:
             await delete_document_chunks(
                 document.tenant_id,
+                document.owner_user_id,
                 document.project_id,
                 document.id,
             )

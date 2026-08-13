@@ -51,6 +51,7 @@ class FakeSession:
 def principal(tenant_id: uuid.UUID, project_id: uuid.UUID) -> Principal:
     return Principal(
         tenant_id,
+        uuid.uuid4(),
         frozenset({project_id}),
         frozenset({"manuals"}),
         frozenset({"admin:evaluate", "feedback:write"}),

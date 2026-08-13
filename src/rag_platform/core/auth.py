@@ -15,6 +15,7 @@ from rag_platform.db.session import get_session
 @dataclass(frozen=True)
 class Principal:
     tenant_id: uuid.UUID
+    owner_user_id: uuid.UUID
     project_ids: frozenset[uuid.UUID]
     collections: frozenset[str]
     permissions: frozenset[str]
@@ -34,10 +35,14 @@ def hash_key(value: str) -> str:
 
 
 async def principal(
-    authorization: str = Header(), session: AsyncSession = Depends(get_session)
+    authorization: str = Header(), x_owner_user_id: str = Header(), session: AsyncSession = Depends(get_session)
 ) -> Principal:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="bearer token required")
+    try:
+        owner_user_id = uuid.UUID(x_owner_user_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="X-Owner-User-Id header must be a valid UUID")
     row = await session.scalar(
         select(ApiKey).where(
             ApiKey.key_hash == hash_key(authorization[7:]), ApiKey.revoked.is_(False)
@@ -47,6 +52,7 @@ async def principal(
         raise HTTPException(status_code=401, detail="invalid API key")
     return Principal(
         row.tenant_id,
+        owner_user_id,
         frozenset(row.allowed_project_ids),
         frozenset(row.allowed_collections),
         frozenset(row.permissions),

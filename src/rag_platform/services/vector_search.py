@@ -10,6 +10,7 @@ from rag_platform.db.models import Chunk, ChunkEmbedding, Document, DocumentVers
 async def vector_search(
     session: AsyncSession,
     tenant_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
     project_id: uuid.UUID,
     collections: list[str],
     filters: dict[str, Any],
@@ -25,6 +26,7 @@ async def vector_search(
         .join(Document, Document.id == Chunk.document_id)
         .where(
             Chunk.tenant_id == tenant_id,
+            Chunk.owner_user_id == owner_user_id,
             Chunk.project_id == project_id,
             Chunk.collection.in_(collections),
             ChunkEmbedding.model == model,

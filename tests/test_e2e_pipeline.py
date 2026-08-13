@@ -91,6 +91,7 @@ def _make_chunk(chunk_index: int, content: str, version_id: uuid.UUID | None = N
 def _principal() -> Principal:
     return Principal(
         TENANT_ID,
+        uuid.uuid4(),
         frozenset({PROJECT_ID}),
         frozenset({COLLECTION}),
         frozenset({"retrieval:search", "documents:write"}),
@@ -487,6 +488,7 @@ async def test_ingest_creates_document_version_and_indexing_events(
 
     who = Principal(
         tenant_id,
+        uuid.uuid4(),
         frozenset({project_id}),
         frozenset({collection_name}),
         frozenset({"documents:write"}),
@@ -546,6 +548,7 @@ async def test_ingest_raises_when_collection_missing() -> None:
     project_id = uuid.uuid4()
     who = Principal(
         uuid.uuid4(),
+        uuid.uuid4(),
         frozenset({project_id}),
         frozenset({"missing"}),
         frozenset({"documents:write"}),
@@ -583,10 +586,11 @@ def test_stable_ids_are_deterministic() -> None:
     # Document IDs — deterministic from scope tuple
     tenant = uuid.UUID("11111111-1111-1111-1111-111111111111")
     project = uuid.UUID("22222222-2222-2222-2222-222222222222")
-    doc_a = stable_document_id(tenant, project, "docs", "ext-001")
-    doc_b = stable_document_id(tenant, project, "docs", "ext-001")
+    owner = uuid.UUID("33333333-3333-3333-3333-333333333333")
+    doc_a = stable_document_id(tenant, project, "docs", owner, "ext-001")
+    doc_b = stable_document_id(tenant, project, "docs", owner, "ext-001")
     assert doc_a == doc_b
-    assert doc_a != stable_document_id(tenant, project, "docs", "ext-002")
+    assert doc_a != stable_document_id(tenant, project, "docs", owner, "ext-002")
 
     # Version IDs — deterministic from document + version + digest
     ver_a = stable_version_id(doc_a, 1, digest)
@@ -615,6 +619,7 @@ def test_scoped_statement_filters_current_version_and_tenant() -> None:
     def _principal(tid: uuid.UUID) -> Principal:
         return Principal(
             tid,
+            uuid.uuid4(),
             frozenset({project_id}),
             frozenset({"docs"}),
             frozenset({"retrieval:search"}),
@@ -688,6 +693,7 @@ async def test_search_returns_empty_for_isolated_tenant(
     session_a = FakeSession()
     principal_a = Principal(
         tenant_a,
+        uuid.uuid4(),
         frozenset({PROJECT_ID}),
         frozenset({COLLECTION}),
         frozenset({"retrieval:search"}),
@@ -699,6 +705,7 @@ async def test_search_returns_empty_for_isolated_tenant(
     session_b = FakeSession()
     principal_b = Principal(
         tenant_b,
+        uuid.uuid4(),
         frozenset({PROJECT_ID}),
         frozenset({COLLECTION}),
         frozenset({"retrieval:search"}),

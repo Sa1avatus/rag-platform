@@ -19,9 +19,10 @@ def stable_document_id(
     tenant_id: uuid.UUID,
     project_id: uuid.UUID,
     collection: str,
+    owner_user_id: uuid.UUID,
     external_document_id: str,
 ) -> uuid.UUID:
-    identity = f"{tenant_id}:{project_id}:{collection}:{external_document_id}"
+    identity = f"{tenant_id}:{project_id}:{collection}:{owner_user_id}:{external_document_id}"
     return uuid.uuid5(DOCUMENT_NAMESPACE, identity)
 
 

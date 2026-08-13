@@ -59,6 +59,7 @@ def request(project_id: uuid.UUID, **updates: Any) -> SearchRequest:
 def principal(tenant_id: uuid.UUID, project_id: uuid.UUID) -> Principal:
     return Principal(
         tenant_id,
+        uuid.uuid4(),
         frozenset({project_id}),
         frozenset({"manuals"}),
         frozenset({"retrieval:search"}),
@@ -105,6 +106,7 @@ async def test_vector_search_excludes_historical_document_versions() -> None:
     session = CapturingSession()
     await vector_search(
         session,  # type: ignore[arg-type]
+        uuid.uuid4(),
         uuid.uuid4(),
         uuid.uuid4(),
         ["manuals"],

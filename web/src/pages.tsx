@@ -1,7 +1,7 @@
-import {FormEvent, useState} from "react";
+import {FormEvent, useRef, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {useSearchParams} from "react-router-dom";
 import {api} from "./api";
+import {usePersistentParams} from "./usePersistentParams";
 const Loading=()=> <div className="skeleton">Loading…</div>;
 type DashboardSnapshot={documents:number;chunks:number;recent_indexing_failures:number;active_index:string;retrieval_latency_ms:number|null;reranker_latency_ms:number|null;cache_hit_rate:number|null;embedding:{model:string;revision:string};health:{status:string;components:Array<{name:string;status:string}>}};
 export function Dashboard(){const q=useQuery({queryKey:["dashboard"],queryFn:()=>api<DashboardSnapshot>("/v1/admin/dashboard"),refetchInterval:10000});if(q.isLoading)return <Loading/>;if(q.error)return <p role="alert">{q.error.message}</p>;const d=q.data;return <><header><div><h1>Dashboard</h1><p className="lede">Current service identity, dependency health, and bounded operational indicators.</p></div></header>{d&&<><section className="cards"><article><span>Documents</span><strong>{d.documents.toLocaleString()}</strong></article><article><span>Chunks</span><strong>{d.chunks.toLocaleString()}</strong></article><article><span>Indexing failures (24h)</span><strong>{d.recent_indexing_failures}</strong></article><article><span>Retrieval latency</span><strong>{d.retrieval_latency_ms==null?"No samples":`${d.retrieval_latency_ms} ms`}</strong></article><article><span>Reranker latency</span><strong>{d.reranker_latency_ms==null?"No samples":`${d.reranker_latency_ms} ms`}</strong></article><article><span>Cache hit rate</span><strong>{d.cache_hit_rate==null?"No samples":`${(d.cache_hit_rate*100).toFixed(1)}%`}</strong></article></section><section className="cards"><article><span>Overall health</span><strong>{d.health.status}</strong></article><article><span>Embedding model</span><strong>{d.embedding.model}</strong><small>{d.embedding.revision}</small></article><article><span>Active index</span><strong>{d.active_index}</strong></article>{d.health.components.map(component=><article key={component.name}><span>{component.name}</span><strong>{component.status}</strong></article>)}</section></>}</>}
@@ -34,7 +34,7 @@ export function documentQuery(tenantId:string, projectId:string, collection:stri
 
 export function Documents() {
   const client = useQueryClient();
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePersistentParams("documents");
   const projectId = params.get("project_id") ?? "";
   const collection = params.get("collection") ?? "";
   const documentId = params.get("document") ?? "";
@@ -119,7 +119,7 @@ function MetricComparison({run}:{run:EvaluationRunItem}) {
 
 export function Evaluation() {
   const client = useQueryClient();
-  const [params,setParams] = useSearchParams();
+  const [params,setParams] = usePersistentParams("evaluation");
   const projectId = params.get("project_id") ?? "";
   const runId = params.get("run") ?? "";
   const [baselineRunId,setBaselineRunId] = useState("");
@@ -180,7 +180,7 @@ export function feedbackScope(tenantId:string, projectId:string, relevant:string
 }
 
 export function Feedback() {
-  const [params,setParams] = useSearchParams();
+  const [params,setParams] = usePersistentParams("feedback");
   const projectId = params.get("project_id") ?? "";
   const relevant = params.get("relevant") ?? "";
   const collection = params.get("collection") ?? "";
@@ -230,11 +230,19 @@ function RankingTable({title,items,score}:{title:string;items:Array<Record<strin
 export function SearchPlayground(){
   const [result,setResult]=useState<PlaygroundResult>();
   const [error,setError]=useState<string>();
+  const savedRef = useRef<Record<string,string> | null>(null);
+  if (savedRef.current === null) {
+    try { savedRef.current = JSON.parse(localStorage.getItem("rag-params:playground") ?? "{}"); } catch { savedRef.current = {}; }
+  }
+  const sv = savedRef.current!;
   async function run(e:FormEvent<HTMLFormElement>){
     e.preventDefault();
     setError(undefined);
     const f=new FormData(e.currentTarget);
     const topK=Number(f.get("top_k")??20);
+    const saved:Record<string,string> = {};
+    for (const [k,v] of f.entries()) saved[k] = String(v);
+    localStorage.setItem("rag-params:playground", JSON.stringify(saved));
     try {
       setResult(await api<PlaygroundResult>("/v1/admin/retrieval/search",{method:"POST",body:JSON.stringify({
         project_id:f.get("project_id"),
@@ -255,7 +263,7 @@ export function SearchPlayground(){
   const lexical=[...results].filter(item=>typeof item.bm25_score==="number").sort((a,b)=>b.bm25_score-a.bm25_score);
   const fusion=[...results].sort((a,b)=>(b.fusion_score??0)-(a.fusion_score??0));
   const reranked=[...results].filter(item=>typeof item.reranker_score==="number").sort((a,b)=>b.reranker_score-a.reranker_score);
-  return <><header><div><h1>Search Playground</h1><p className="lede">Compare retrieval stages and degraded fallbacks with one scoped query.</p></div></header><form onSubmit={run} className="filters"><input name="project_id" placeholder="Project UUID" required/><input name="collections" placeholder="Collection names" required/><select name="mode" aria-label="Retrieval mode" defaultValue="hybrid"><option value="lexical">Lexical</option><option value="dense">Dense</option><option value="hybrid">Hybrid</option></select><label>Candidate top K<input name="top_k" type="number" min="1" max="200" defaultValue="20"/></label><label>Final top K<input name="rerank_top_k" type="number" min="1" max="50" defaultValue="8"/></label><label><input name="use_reranker" type="checkbox" defaultChecked/> External reranker</label><textarea name="query" placeholder="Ask a retrieval question" required/><button>Search</button></form>{error&&<p role="alert">{error}</p>}{result&&<><section className="cards"><article><span>Requested mode</span><strong>{result.trace.requested_mode}</strong></article><article><span>Effective mode</span><strong>{result.trace.effective_mode}</strong></article><article><span>Total latency</span><strong>{result.trace.latency_ms} ms</strong></article><article><span>Reranker</span><strong>{result.trace.reranker_degraded?"Degraded":result.trace.reranker_used?"Used":"Skipped"}</strong></article></section><RankingTable title="Dense ranking" items={dense} score="vector_score"/><RankingTable title="Lexical ranking" items={lexical} score="bm25_score"/><RankingTable title="Fusion ranking" items={fusion} score="fusion_score"/><RankingTable title="Reranker ranking" items={reranked} score="reranker_score"/><RankingTable title="Final selected results" items={results} score="final_score"/><details><summary>Trace and stage timings</summary><pre>{JSON.stringify(result.trace,null,2)}</pre></details></>}</>;
+  return <><header><div><h1>Search Playground</h1><p className="lede">Compare retrieval stages and degraded fallbacks with one scoped query.</p></div></header><form onSubmit={run} className="filters"><input name="project_id" placeholder="Project UUID" required defaultValue={sv.project_id ?? ""}/><input name="collections" placeholder="Collection names" required defaultValue={sv.collections ?? ""}/><select name="mode" aria-label="Retrieval mode" defaultValue={sv.mode ?? "hybrid"}><option value="lexical">Lexical</option><option value="dense">Dense</option><option value="hybrid">Hybrid</option></select><label>Candidate top K<input name="top_k" type="number" min="1" max="200" defaultValue={sv.top_k ?? "20"}/></label><label>Final top K<input name="rerank_top_k" type="number" min="1" max="50" defaultValue={sv.rerank_top_k ?? "8"}/></label><label><input name="use_reranker" type="checkbox" defaultChecked={sv.use_reranker !== "false"}/> External reranker</label><textarea name="query" placeholder="Ask a retrieval question" required defaultValue={sv.query ?? ""}/><button>Search</button></form>{error&&<p role="alert">{error}</p>}{result&&<><section className="cards"><article><span>Requested mode</span><strong>{result.trace.requested_mode}</strong></article><article><span>Effective mode</span><strong>{result.trace.effective_mode}</strong></article><article><span>Total latency</span><strong>{result.trace.latency_ms} ms</strong></article><article><span>Reranker</span><strong>{result.trace.reranker_degraded?"Degraded":result.trace.reranker_used?"Used":"Skipped"}</strong></article></section><RankingTable title="Dense ranking" items={dense} score="vector_score"/><RankingTable title="Lexical ranking" items={lexical} score="bm25_score"/><RankingTable title="Fusion ranking" items={fusion} score="fusion_score"/><RankingTable title="Reranker ranking" items={reranked} score="reranker_score"/><RankingTable title="Final selected results" items={results} score="final_score"/><details><summary>Trace and stage timings</summary><pre>{JSON.stringify(result.trace,null,2)}</pre></details></>}</>;
 }
 export function SystemHealth(){const q=useQuery({queryKey:["health"],queryFn:()=>api<any>("/v1/admin/system/health"),refetchInterval:10000});return <><h1>System Health</h1>{q.isLoading?<Loading/>:<section className="cards">{q.data?.components.map((c:any)=><article key={c.name}><span>{c.name}</span><strong className="healthy">{c.status}</strong></article>)}</section>}</>}
 
@@ -364,7 +372,7 @@ export function auditQuery(params: URLSearchParams) {
 }
 
 export function AuditLog() {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePersistentParams("audit-log");
   const queryString = auditQuery(params);
   const query = useQuery({
     queryKey: ["audit-log", queryString],
@@ -422,7 +430,7 @@ export const canCancelJob = (status: string) => status === "queued";
 
 export function Indexing() {
   const client = useQueryClient();
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePersistentParams("indexing");
   const status = params.get("status") ?? "";
   const queryString = new URLSearchParams({limit: "100"});
   if (status) queryString.set("status", status);
@@ -487,7 +495,7 @@ export const traceStatus = (trace: RetrievalTrace) =>
   trace.trace.reranker_degraded || trace.trace.opensearch_degraded ? "Degraded" : "Healthy";
 
 export function RetrievalTraces() {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePersistentParams("retrieval-traces");
   const selectedId = params.get("trace");
   const query = useQuery({
     queryKey: ["retrieval-traces"],

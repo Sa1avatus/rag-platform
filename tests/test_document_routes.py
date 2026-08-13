@@ -46,6 +46,7 @@ class FakeSession:
 def scoped_principal(tenant_id: uuid.UUID, project_id: uuid.UUID, *permissions: str) -> Principal:
     return Principal(
         tenant_id,
+        uuid.uuid4(),
         frozenset({project_id}),
         frozenset({"manuals"}),
         frozenset(permissions),

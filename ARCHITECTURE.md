@@ -16,12 +16,14 @@ flowchart LR
 
 Ingestion commits the version, status, and outbox event atomically. A dispatcher delivers the
 idempotent indexing job. The worker extracts and normalizes text, creates deterministic chunks,
-embeds them in batches, writes PostgreSQL first, then updates OpenSearch and status.
+embeds them in batches, writes PostgreSQL first (with owner metadata on every chunk), then
+updates OpenSearch (including the owner field) and status.
 
-Retrieval applies tenant/project/collection predicates before client metadata filters, performs
-vector and BM25 searches, normalizes and fuses ranks with RRF, removes duplicates, optionally calls
-the external reranker, selects parent context, and persists the trace. OpenSearch failure selects
-vector-only mode; reranker failure returns fusion results; only loss of vector search produces 503.
+Retrieval applies tenant, project, collection, and owner predicates before client metadata filters,
+performs vector and BM25 searches (both owner-scoped), normalizes and fuses ranks with RRF, removes
+duplicates, optionally calls the external reranker (which receives only owner-scoped candidates),
+selects parent context, and persists the trace. OpenSearch failure selects vector-only mode; reranker
+failure returns fusion results; only loss of vector search produces 503.
 
 PostgreSQL commits chunks and embeddings before OpenSearch indexing. Until BM25 indexing succeeds,
 the document remains `partially_indexed` but is available to the PostgreSQL retrieval path.

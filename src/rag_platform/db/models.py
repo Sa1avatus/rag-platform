@@ -102,10 +102,11 @@ class Document(Base, TimestampMixin):
             "tenant_id",
             "project_id",
             "collection",
+            "owner_user_id",
             "external_document_id",
             name="uq_documents_scope_external_id",
         ),
-        Index("ix_documents_scope", "tenant_id", "project_id", "collection"),
+        Index("ix_documents_scope", "tenant_id", "project_id", "collection", "owner_user_id"),
         Index("ix_documents_metadata", "metadata", postgresql_using="gin"),
     )
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -115,6 +116,7 @@ class Document(Base, TimestampMixin):
     project_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     collection: Mapped[str] = mapped_column(String(100), index=True)
     external_document_id: Mapped[str] = mapped_column(String(300), index=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
@@ -139,6 +141,7 @@ class DocumentVersion(Base, TimestampMixin):
     )
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     collection: Mapped[str] = mapped_column(String(100), index=True)
     external_document_id: Mapped[str] = mapped_column(String(300), index=True)
     document_type: Mapped[str] = mapped_column(String(100), index=True)
@@ -195,6 +198,7 @@ class Chunk(Base, TimestampMixin):
     )
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     collection: Mapped[str] = mapped_column(String(100), index=True)
     parent_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("chunks.id", ondelete="SET NULL")

@@ -158,6 +158,7 @@ async def admin_documents(
     tenant_id: uuid.UUID,
     project_id: uuid.UUID,
     collection: str | None = None,
+    owner_user_id: uuid.UUID | None = None,
     limit: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
@@ -169,6 +170,8 @@ async def admin_documents(
     ]
     if collection:
         filters.append(Document.collection == collection)
+    if owner_user_id is not None:
+        filters.append(Document.owner_user_id == owner_user_id)
     rows = (
         await session.scalars(
             select(Document)
@@ -229,18 +232,22 @@ async def admin_document_chunks(
     tenant_id: uuid.UUID,
     project_id: uuid.UUID,
     collection: str,
+    owner_user_id: uuid.UUID | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, object]]:
+    doc_filters = [
+        Document.id == document_id,
+        Document.tenant_id == tenant_id,
+        Document.project_id == project_id,
+        Document.collection == collection,
+        Document.deleted_at.is_(None),
+    ]
+    if owner_user_id is not None:
+        doc_filters.append(Document.owner_user_id == owner_user_id)
     document = await session.scalar(
-        select(Document).where(
-            Document.id == document_id,
-            Document.tenant_id == tenant_id,
-            Document.project_id == project_id,
-            Document.collection == collection,
-            Document.deleted_at.is_(None),
-        )
+        select(Document).where(*doc_filters)
     )
     if document is None:
         raise HTTPException(404, "document not found")
@@ -836,6 +843,7 @@ async def compare_collection_configurations(
         raise HTTPException(404, "collection not found")
     who = Principal(
         row.tenant_id,
+        uuid.UUID(int=0),
         frozenset({row.project_id}),
         frozenset({row.name}),
         frozenset({"retrieval:search"}),
@@ -1240,6 +1248,7 @@ async def admin_search(
         raise HTTPException(404, "project not found")
     who = Principal(
         project.tenant_id,
+        uuid.UUID(int=0),
         frozenset({project.id}),
         frozenset(data.collections),
         frozenset({"retrieval:search"}),
@@ -1301,6 +1310,7 @@ async def repeat_retrieval_trace(
         raise HTTPException(409, "retrieval trace query is invalid")
     who = Principal(
         row.tenant_id,
+        uuid.UUID(int=0),
         frozenset({row.project_id}),
         frozenset(collections),
         frozenset({"retrieval:search"}),

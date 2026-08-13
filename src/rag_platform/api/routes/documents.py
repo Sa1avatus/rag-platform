@@ -156,6 +156,7 @@ async def list_documents(
         select(Document)
         .where(
             Document.tenant_id == who.tenant_id,
+            Document.owner_user_id == who.owner_user_id,
             Document.project_id == project_id,
             Document.collection.in_(collections),
             Document.deleted_at.is_(None),
@@ -189,6 +190,7 @@ async def get(
         select(Document).where(
             Document.id == document_id,
             Document.tenant_id == who.tenant_id,
+            Document.owner_user_id == who.owner_user_id,
             Document.project_id.in_(who.project_ids),
             Document.deleted_at.is_(None),
         )
@@ -216,6 +218,7 @@ async def update_document(
         .where(
             Document.id == document_id,
             Document.tenant_id == who.tenant_id,
+            Document.owner_user_id == who.owner_user_id,
             Document.project_id.in_(who.project_ids),
             Document.deleted_at.is_(None),
         )
@@ -267,6 +270,7 @@ async def document_chunks(
         select(Document).where(
             Document.id == document_id,
             Document.tenant_id == who.tenant_id,
+            Document.owner_user_id == who.owner_user_id,
             Document.project_id.in_(who.project_ids),
             Document.deleted_at.is_(None),
         )
@@ -281,6 +285,7 @@ async def document_chunks(
             .where(
                 Chunk.document_id == document.id,
                 Chunk.tenant_id == who.tenant_id,
+                Chunk.owner_user_id == who.owner_user_id,
                 Chunk.project_id == document.project_id,
                 Chunk.collection == document.collection,
                 DocumentVersion.is_current.is_(True),
@@ -325,6 +330,7 @@ async def delete(
         select(Document).where(
             Document.id == document_id,
             Document.tenant_id == who.tenant_id,
+            Document.owner_user_id == who.owner_user_id,
         )
     )
     if row is None:
@@ -343,6 +349,7 @@ async def reindex(
         select(Document).where(
             Document.id == document_id,
             Document.tenant_id == who.tenant_id,
+            Document.owner_user_id == who.owner_user_id,
             Document.deleted_at.is_(None),
         )
     )

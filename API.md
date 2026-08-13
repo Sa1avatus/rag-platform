@@ -1,14 +1,19 @@
 # API
 
 The OpenAPI document at `/openapi.json` is canonical. `/v1` is backward-compatible; breaking
-changes require `/v2`. Service calls use `Authorization: Bearer <service-key>`. Administrative calls
-use the separately managed admin token. Pagination endpoints use server-side filters and stable IDs.
+changes require `/v2`. Service calls use `Authorization: Bearer ` to authenticate the upstream
+service and `X-Owner-User-Id: ` to identify the resource owner. The header is required on every
+service API request; the API returns 400 if it is missing or not a valid UUID. Administrative calls
+use the separately managed admin token and are not restricted to a single owner. Pagination endpoints
+use server-side filters and stable IDs.
 
 Core paths are `/v1/documents`, `/v1/retrieval/search`, `/v1/retrieval/context`, `/v1/feedback`,
 `/v1/evaluations/*`, and `/v1/admin/*`. Context returns sources and assembled text, never an LLM
 answer.
 
-Retrieval accepts `mode` as `lexical`, `dense`, or `hybrid` (the default). Lexical mode avoids the
+Retrieval accepts `mode` as `lexical`, `dense`, or `hybrid` (the default). All retrieval modes
+apply the `X-Owner-User-Id` filter inside the vector, BM25, and fusion stages; the reranker
+receives only owner-scoped candidates. Lexical mode avoids the
 embedding worker while OpenSearch is healthy; dense mode does not call OpenSearch; hybrid mode
 combines both rankings with RRF. If OpenSearch fails, hybrid and lexical requests degrade to dense
 retrieval and expose `requested_mode`, `effective_mode`, stage timings, and the degraded state in
@@ -71,8 +76,10 @@ Project reconciliation, collection reindex, and indexing-job retry/cancel operat
 recorded after they succeed.
 
 Service clients can page through active documents with `GET /v1/documents?project_id=...` and may
-restrict the result to one authorized `collection`. `GET /v1/documents/{document_id}/chunks` returns
-the current indexed derivatives without exposing records outside the API key scope.
+restrict the result to one authorized `collection`. All results are scoped to the requesting
+`X-Owner-User-Id`; two users with the same API key see disjoint document sets.
+`GET /v1/documents/{document_id}/chunks` returns
+the current indexed derivatives without exposing records outside the owner scope.
 
 Document ingestion accepts only collections registered for the same tenant and project through the
 administrative API. An authorized key alone cannot create an implicit collection.

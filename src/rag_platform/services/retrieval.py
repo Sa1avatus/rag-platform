@@ -56,6 +56,7 @@ def scoped_statement(
         .join(Document, Document.id == Chunk.document_id)
         .where(
             Chunk.tenant_id == who.tenant_id,
+            Chunk.owner_user_id == who.owner_user_id,
             Chunk.project_id == data.project_id,
             Chunk.collection.in_(data.collections),
             DocumentVersion.is_current.is_(True),
@@ -109,6 +110,7 @@ async def _search(
             return await vector_search(
                 session,
                 who.tenant_id,
+                who.owner_user_id,
                 data.project_id,
                 data.collections,
                 data.filters,
@@ -126,6 +128,7 @@ async def _search(
         try:
             return await bm25_search(
                 who.tenant_id,
+                who.owner_user_id,
                 data.project_id,
                 data.collections,
                 data.query,
