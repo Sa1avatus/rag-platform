@@ -18,7 +18,7 @@ services:
     env_file: .env
     environment:
       PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus-multiproc
-    ports: ["127.0.0.1:8100:8100"]
+    ports: ["0.0.0.0:8100:8100"]
     depends_on:
       rag-migrate: {condition: service_completed_successfully}
       rag-postgres: {condition: service_healthy}
@@ -31,7 +31,7 @@ services:
     build:
       context: .
       target: worker
-    command: celery -A rag_platform.worker.celery_app worker --beat --schedule=/tmp/celerybeat-schedule --queues=indexing,search --loglevel=INFO --concurrency=1
+    command: celery -A rag_platform.worker.celery_app worker --beat --schedule=/tmp/celerybeat-schedule --queues=indexing,search --loglevel=INFO --concurrency=4
     env_file: .env
     depends_on:
       rag-migrate: {condition: service_completed_successfully}
@@ -53,7 +53,7 @@ services:
     deploy: {resources: {limits: {memory: 6G}}}
   rag-web:
     build: ./web
-    ports: ["127.0.0.1:8300:8080"]
+    ports: ["0.0.0.0:8300:8080"]
     depends_on: [rag-api]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]

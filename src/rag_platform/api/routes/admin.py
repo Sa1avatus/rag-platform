@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.api.schemas import (
     ApiKeyCreate,
+    ApiKeyUpdate,
     CacheClearRequest,
     CollectionCreate,
     CollectionUpdate,
@@ -711,6 +712,54 @@ async def api_keys(
         }
         for row in rows
     ]
+
+
+@router.patch("/api-keys/{key_id}")
+async def update_api_key(
+    key_id: uuid.UUID,
+    data: ApiKeyUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
+    row = await session.get(ApiKey, key_id)
+    if row is None:
+        raise HTTPException(404, "API key not found")
+    if row.revoked:
+        raise HTTPException(409, "Revoked API key cannot be updated")
+    allowed_collections = list(dict.fromkeys(data.allowed_collections))
+    collections = (
+        await session.scalars(
+            select(Collection).where(
+                Collection.tenant_id == row.tenant_id,
+                Collection.project_id.in_(row.allowed_project_ids),
+                Collection.name.in_(allowed_collections),
+            )
+        )
+    ).all()
+    registered_names = {collection.name for collection in collections}
+    unknown_names = sorted(set(allowed_collections) - registered_names)
+    if unknown_names:
+        raise HTTPException(
+            422,
+            f"Collections are not registered in an allowed project: {', '.join(unknown_names)}",
+        )
+    row.allowed_collections = allowed_collections
+    _audit(
+        session,
+        tenant_id=row.tenant_id,
+        project_id=None,
+        action="api_key.authorization.update",
+        resource_type="api_key",
+        resource_id=row.id,
+    )
+    await session.commit()
+    return {
+        "id": row.id,
+        "prefix": row.prefix,
+        "allowed_project_ids": row.allowed_project_ids,
+        "allowed_collections": row.allowed_collections,
+        "permissions": row.permissions,
+        "revoked": row.revoked,
+    }
 
 
 @router.delete("/api-keys/{key_id}", status_code=204)

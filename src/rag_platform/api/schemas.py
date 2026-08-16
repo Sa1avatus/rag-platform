@@ -99,6 +99,10 @@ class ApiKeyCreate(BaseModel):
     permissions: list[str]
 
 
+class ApiKeyUpdate(BaseModel):
+    allowed_collections: list[str] = Field(min_length=1)
+
+
 class CollectionCreate(BaseModel):
     tenant_id: uuid.UUID
     project_id: uuid.UUID

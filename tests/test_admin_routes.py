@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from rag_platform.api.routes import admin
 from rag_platform.api.schemas import (
     ApiKeyCreate,
+    ApiKeyUpdate,
     CacheClearRequest,
     CollectionCreate,
     CollectionUpdate,
@@ -482,6 +483,46 @@ async def test_list_and_revoke_api_keys() -> None:
     with pytest.raises(HTTPException) as error:
         await admin.revoke_api_key(key_id, FakeSession(scalar_values=[None]))
     assert error.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_api_key_collections_validates_allowed_project_scope() -> None:
+    tenant_id, project_id, key_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    row = admin.ApiKey(
+        id=key_id,
+        tenant_id=tenant_id,
+        prefix="rag_visible",
+        key_hash="secret-hash",
+        allowed_project_ids=[project_id],
+        allowed_collections=["profiles"],
+        permissions=["documents:write", "retrieval:search"],
+        revoked=False,
+    )
+    profiles = admin.Collection(
+        tenant_id=tenant_id, project_id=project_id, name="profiles", settings={}
+    )
+    resumes = admin.Collection(
+        tenant_id=tenant_id, project_id=project_id, name="resumes", settings={}
+    )
+    session = FakeSession(scalar_values=[row], rows=[profiles, resumes])
+
+    updated = await admin.update_api_key(
+        key_id,
+        ApiKeyUpdate(allowed_collections=["profiles", "resumes", "resumes"]),
+        session,
+    )
+
+    assert updated["allowed_collections"] == ["profiles", "resumes"]
+    assert session.commits == 1
+    assert session.added[0].payload["action"] == "api_key.authorization.update"  # type: ignore[attr-defined]
+
+    with pytest.raises(HTTPException) as error:
+        await admin.update_api_key(
+            key_id,
+            ApiKeyUpdate(allowed_collections=["unknown"]),
+            FakeSession(scalar_values=[row], rows=[]),
+        )
+    assert error.value.status_code == 422
 
 
 @pytest.mark.asyncio

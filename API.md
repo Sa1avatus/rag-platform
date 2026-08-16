@@ -51,7 +51,10 @@ Administrative retrieval traces are available through `GET /v1/admin/retrieval/t
 detail endpoint. `POST /v1/admin/retrieval/traces/{request_id}/repeat` replays the stored query,
 collections, metadata filters, and retrieval configuration into a new trace.
 `GET /v1/admin/api-keys` exposes prefixes and scopes but never raw keys or hashes. Administrators
-can idempotently revoke a key with `DELETE /v1/admin/api-keys/{key_id}`.
+can update only an active key's registered collection allowlist with
+`PATCH /v1/admin/api-keys/{key_id}` and can idempotently revoke a key with
+`DELETE /v1/admin/api-keys/{key_id}`. The update rejects collections outside the key's tenant and
+already allowed projects; it never returns the raw key or hash.
 `GET /v1/admin/reranker/status` reports safe readiness metadata. `POST /v1/admin/reranker/test`
 sends one inert test query and reports latency/result count; external failures are returned as
 `unavailable` rather than failing the admin API.
