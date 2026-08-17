@@ -17,10 +17,30 @@ from rag_platform.services.embedding_contract import validate_embedding_dimensio
 from rag_platform.services.readiness import MODEL_READY_KEY
 
 
+def _resolve_device(requested: str) -> str:
+    """Resolve embedding device. 'auto' picks CUDA if available and has
+    enough free memory (>1 GB), otherwise falls back to CPU."""
+    if requested != "auto":
+        return requested
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return "cpu"
+        free, total = torch.cuda.mem_info(0)
+        free_gb = free / (1024**3)
+        if free_gb < 1.0:
+            return "cpu"
+        return "cuda"
+    except Exception:
+        return "cpu"
+
+
 @lru_cache(maxsize=1)
 def model() -> SentenceTransformer:
     settings = get_settings()
-    return SentenceTransformer(settings.embedding_model, device=settings.embedding_device)
+    device = _resolve_device(settings.embedding_device)
+    return SentenceTransformer(settings.embedding_model, device=device)
 
 
 def embed(texts: list[str]) -> list[list[float]]:
@@ -50,6 +70,7 @@ def validate_model_contract(**kwargs: object) -> None:
     detected = dimension()
     settings = get_settings()
     validate_embedding_dimension(detected, settings.embedding_dimension)
+    device = _resolve_device(settings.embedding_device)
     cache = Redis.from_url(settings.redis_url, decode_responses=True)
     try:
         cache.set(
@@ -58,7 +79,7 @@ def validate_model_contract(**kwargs: object) -> None:
                 {
                     "model": settings.embedding_model,
                     "dimension": detected,
-                    "device": settings.embedding_device,
+                    "device": device,
                 }
             ),
             ex=60,

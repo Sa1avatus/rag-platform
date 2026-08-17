@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     embedding_backend: str = "sentence-transformers"
     embedding_revision: str = "default"
     embedding_normalization: str = "l2"
-    embedding_device: str = "cpu"
+    embedding_device: str = "auto"
     embedding_batch_size: int = 16
     embedding_dimension: int = Field(default=1024, ge=1)
     parser_version: str = "text-v1"
