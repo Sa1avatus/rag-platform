@@ -23,17 +23,21 @@ def _resolve_device(requested: str) -> str:
     if requested != "auto":
         return requested
     try:
-        import torch
+        import subprocess
 
-        if not torch.cuda.is_available():
-            return "cpu"
-        free, total = torch.cuda.mem_info(0)
-        free_gb = free / (1024**3)
-        if free_gb < 1.0:
-            return "cpu"
-        return "cuda"
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            free_mb = int(result.stdout.strip().split("\n")[0])
+            if free_mb >= 1024:
+                return "cuda"
     except Exception:
-        return "cpu"
+        pass
+    return "cpu"
 
 
 @lru_cache(maxsize=1)
