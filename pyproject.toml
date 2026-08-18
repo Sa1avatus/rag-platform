@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rag-platform"
-version = "0.1.0"
+version = "1.1.0"
 description = "Multi-tenant ingestion and hybrid retrieval platform"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,8 +19,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["mypy>=1.14,<2", "pytest>=8.3,<9", "pytest-asyncio>=0.25,<1", "pytest-cov>=6,<7", "respx>=0.22,<1", "ruff>=0.9,<1"]
-worker = ["onnxruntime>=1.20,<2", "transformers>=4.40,<5"]
-gpu = ["onnxruntime-gpu>=1.20,<2", "transformers>=4.40,<5"]
+worker = ["onnxruntime>=1.20,<2", "transformers>=4.40,<4.52"]
+gpu = ["onnxruntime-gpu>=1.20,<2", "transformers>=4.40,<4.52"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rag_platform"]

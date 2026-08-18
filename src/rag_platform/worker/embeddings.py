@@ -1,5 +1,4 @@
 import json
-import os
 import time
 from functools import lru_cache
 from pathlib import Path
@@ -7,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import onnxruntime as ort
 from celery.signals import worker_process_init
+from huggingface_hub import snapshot_download
 from redis import Redis
 from transformers import AutoTokenizer
 
@@ -20,7 +20,7 @@ from rag_platform.core.metrics import (
 from rag_platform.services.embedding_contract import validate_embedding_dimension
 from rag_platform.services.readiness import MODEL_READY_KEY
 
-_LOCAL_ONNX_DIR = "/app/onnx-model"
+_ONNX_SUBFOLDER = "onnx"
 
 
 def _resolve_device(requested: str) -> str:
@@ -53,34 +53,32 @@ def _onnx_provider(device: str) -> str:
     return "CPUExecutionProvider"
 
 
-def _find_onnx_model(model_dir: str) -> str:
-    """Locate the ``.onnx`` model file inside *model_dir*."""
-    candidates = sorted(Path(model_dir).glob("*.onnx"))
-    if not candidates:
-        raise FileNotFoundError(f"No .onnx file found in {model_dir}")
-    return str(candidates[0])
-
-
 @lru_cache(maxsize=1)
 def _load() -> tuple:
     """Load ONNX session + tokenizer once per worker process.
 
-    If a pre-exported ONNX model is baked into the Docker image at
-    ``/app/onnx-model`` it is used directly; otherwise the model path
-    from settings is expected to contain ``.onnx`` weights.
+    Downloads the ``onnx/`` subfolder from the HuggingFace model repo so
+    that external data files (``model.onnx_data``) are co-located with
+    ``model.onnx``.  The folder is cached by *huggingface_hub*.
     """
     settings = get_settings()
     device = _resolve_device(settings.embedding_device)
     provider = _onnx_provider(device)
 
-    model_path = _LOCAL_ONNX_DIR if os.path.isdir(_LOCAL_ONNX_DIR) else settings.embedding_model
-
-    onnx_file = _find_onnx_model(model_path)
-    session = ort.InferenceSession(
-        onnx_file,
-        providers=[provider],
+    # Download the entire onnx/ subfolder (model.onnx + model.onnx_data + tokenizer).
+    local_dir = snapshot_download(
+        settings.embedding_model,
+        allow_patterns=[f"{_ONNX_SUBFOLDER}/*"],
     )
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    onnx_dir = Path(local_dir) / _ONNX_SUBFOLDER
+
+    onnx_model_path = str(onnx_dir / "model.onnx")
+    tokenizer = AutoTokenizer.from_pretrained(str(onnx_dir))
+
+    available = set(ort.get_available_providers())
+    use_provider = provider if provider in available else "CPUExecutionProvider"
+
+    session = ort.InferenceSession(onnx_model_path, providers=[use_provider])
     return session, tokenizer, device
 
 
@@ -132,8 +130,8 @@ def dimension() -> int:
     dummy = tokenizer("test", return_tensors="np")
     valid = {i.name for i in session.get_inputs()}
     ort_inputs = {k: v for k, v in dummy.items() if k in valid}
-    (out,) = session.run(None, ort_inputs)
-    return int(out.shape[-1])
+    outputs = session.run(None, ort_inputs)
+    return int(outputs[0].shape[-1])
 
 
 @worker_process_init.connect
