@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     embedding_device: str = "auto"
     embedding_batch_size: int = 16
     embedding_dimension: int = Field(default=1024, ge=1)
+    active_embedding_model: str = "bge-m3"
     parser_version: str = "text-v1"
     chunker_version: str = "word-window-v1"
     chunk_strategy: str = "recursive"

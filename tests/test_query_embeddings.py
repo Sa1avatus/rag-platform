@@ -23,10 +23,10 @@ class FakeResult:
 
 @pytest.fixture(autouse=True)
 def cache_miss(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def get_cached(query: str) -> None:
+    async def get_cached(query: str, **kwargs: object) -> None:
         return None
 
-    async def set_cached(query: str, vector: list[float]) -> None:
+    async def set_cached(query: str, vector: list[float], **kwargs: object) -> None:
         return None
 
     monkeypatch.setattr(query_embeddings, "get_query_embedding", get_cached)
@@ -44,7 +44,7 @@ async def test_embed_query_returns_numeric_vector(monkeypatch: pytest.MonkeyPatc
 
 @pytest.mark.asyncio
 async def test_embed_query_returns_cached_vector(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def get_cached(query: str) -> list[float]:
+    async def get_cached(query: str, **kwargs: object) -> list[float]:
         return [0.25, 0.75]
 
     monkeypatch.setattr(query_embeddings, "get_query_embedding", get_cached)

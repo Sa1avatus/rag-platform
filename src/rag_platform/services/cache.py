@@ -15,11 +15,15 @@ class CacheUnavailable(RuntimeError):
     pass
 
 
-def query_embedding_cache_key(query: str, settings: Settings) -> str:
+def query_embedding_cache_key(
+    query: str,
+    settings: Settings,
+    *,
+    model_id: str = "",
+) -> str:
     identity = {
         "backend": settings.embedding_backend,
-        "dimension": settings.embedding_dimension,
-        "model": settings.embedding_model,
+        "model": model_id or settings.active_embedding_model,
         "normalization": settings.embedding_normalization,
         "query": query.strip(),
         "revision": settings.embedding_revision,
@@ -30,19 +34,23 @@ def query_embedding_cache_key(query: str, settings: Settings) -> str:
     return f"{settings.cache_namespace}:query-embedding:{digest}"
 
 
-async def get_query_embedding(query: str) -> list[float] | None:
+async def get_query_embedding(
+    query: str,
+    *,
+    model_id: str = "",
+) -> list[float] | None:
     settings = get_settings()
     if not settings.query_embedding_cache_enabled:
         return None
     cache = Redis.from_url(settings.redis_url, decode_responses=True)
     try:
-        value = await cache.get(query_embedding_cache_key(query, settings))
+        value = await cache.get(query_embedding_cache_key(query, settings, model_id=model_id))
         if value is None:
             CACHE_MISSES.labels(QUERY_EMBEDDING_CACHE).inc()
             return None
         parsed = json.loads(value)
         if not isinstance(parsed, list) or not parsed:
-            await cache.delete(query_embedding_cache_key(query, settings))
+            await cache.delete(query_embedding_cache_key(query, settings, model_id=model_id))
             CACHE_MISSES.labels(QUERY_EMBEDDING_CACHE).inc()
             return None
         CACHE_HITS.labels(QUERY_EMBEDDING_CACHE).inc()
@@ -54,14 +62,19 @@ async def get_query_embedding(query: str) -> list[float] | None:
         await cache.aclose()
 
 
-async def set_query_embedding(query: str, vector: list[float]) -> None:
+async def set_query_embedding(
+    query: str,
+    vector: list[float],
+    *,
+    model_id: str = "",
+) -> None:
     settings = get_settings()
     if not settings.query_embedding_cache_enabled:
         return
     cache = Redis.from_url(settings.redis_url, decode_responses=True)
     try:
         await cache.set(
-            query_embedding_cache_key(query, settings),
+            query_embedding_cache_key(query, settings, model_id=model_id),
             json.dumps(vector, separators=(",", ":")),
             ex=settings.query_embedding_cache_ttl_seconds,
         )

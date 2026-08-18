@@ -9,6 +9,7 @@ from structlog.contextvars import get_contextvars
 from rag_platform.api.schemas import SearchRequest
 from rag_platform.core.auth import Principal
 from rag_platform.core.config import get_settings
+from rag_platform.core.embedding_registry import get_active_model
 from rag_platform.core.metrics import (
     BM25_SEARCH_DURATION,
     DUPLICATE_CHUNKS_REMOVED,
@@ -274,6 +275,9 @@ async def _search(
         "normalized_query": data.query.strip(),
         "filters": data.filters,
         "embedding_model": settings.embedding_model,
+        "model_id": get_active_model().id,
+        "index_version": get_active_model().index_version,
+        "embedding_dimension": get_active_model().dimension,
         "requested_mode": data.mode,
         "effective_mode": effective_mode,
         "retrieval_strategy": f"{effective_mode}_rrf",

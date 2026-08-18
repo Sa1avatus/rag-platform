@@ -2,7 +2,7 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from prometheus_client import REGISTRY
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,7 @@ from rag_platform.db.session import get_session
 from rag_platform.services.admin_metrics import metric_timeseries
 from rag_platform.services.cache import CacheUnavailable, clear_rag_cache
 from rag_platform.services.documents import enqueue_deletion, enqueue_indexing
-from rag_platform.services.embedding_admin import embedding_profile
+from rag_platform.services.embedding_admin import all_models_status, embedding_profile
 from rag_platform.services.evaluation_metrics import pin_retrieval_configuration
 from rag_platform.services.health import system_health
 from rag_platform.services.reconciliation import reconcile, reindex_collection, reindex_embeddings
@@ -197,7 +197,6 @@ async def admin_documents(
     # Latest version content per document
     version_map: dict[uuid.UUID, DocumentVersion] = {}
     if doc_ids:
-        from sqlalchemy import and_
         latest_versions = (
             await session.scalars(
                 select(DocumentVersion)
@@ -434,7 +433,7 @@ def _comparison_metrics(payload: dict[str, object]) -> dict[str, float]:
     return {
         str(name): float(value)
         for name, value in raw.items()
-        if isinstance(value, (int, float)) and not isinstance(value, bool)
+        if isinstance(value, int | float) and not isinstance(value, bool)
     }
 
 
@@ -1266,12 +1265,48 @@ async def test_reranker() -> dict[str, object]:
 
 @router.get("/models/embeddings")
 async def embeddings() -> dict[str, object]:
-    return await embedding_profile()
+    """Return all registered embedding models with their status."""
+    models = await all_models_status()
+    active = await embedding_profile()
+    return {"active": active, "models": models}
 
 
 @router.post("/models/embeddings/check")
 async def check_embeddings() -> dict[str, object]:
     return await embedding_profile()
+
+
+@router.post("/models/embeddings/activate", status_code=200)
+async def activate_embedding_model(
+    model_id: str = Body(..., embed=True),
+) -> dict[str, object]:
+    """Switch the active embedding model."""
+    from rag_platform.core.embedding_registry import get_model_by_id
+
+    try:
+        cfg = get_model_by_id(model_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    # Validate: model must be enabled.
+    if not cfg.enabled:
+        raise HTTPException(409, f"Model {model_id} is disabled")
+    # Update settings in-memory (runtime switch).
+    settings = get_settings()
+    settings.active_embedding_model = cfg.id
+    settings.embedding_model = cfg.model_name
+    settings.embedding_dimension = cfg.dimension
+    settings.embedding_normalization = cfg.normalization
+    settings.index_version = cfg.index_version
+    # Persist to Redis so all containers pick it up.
+    from rag_platform.core.embedding_registry import set_active_model_in_redis
+
+    set_active_model_in_redis(cfg.id, cfg)
+    return {
+        "activated": cfg.id,
+        "model": cfg.model_name,
+        "dimension": cfg.dimension,
+        "index_version": cfg.index_version,
+    }
 
 
 @router.post("/models/embeddings/reindex", status_code=202)

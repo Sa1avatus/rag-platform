@@ -1,6 +1,5 @@
 import json
 import time
-from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +10,10 @@ from redis import Redis
 from transformers import AutoTokenizer
 
 from rag_platform.core.config import get_settings
+from rag_platform.core.embedding_registry import (
+    EmbeddingModelConfig,
+    get_active_model,
+)
 from rag_platform.core.metrics import (
     EMBEDDING_BATCH_SIZE,
     EMBEDDING_DURATION,
@@ -19,8 +22,6 @@ from rag_platform.core.metrics import (
 )
 from rag_platform.services.embedding_contract import validate_embedding_dimension
 from rag_platform.services.readiness import MODEL_READY_KEY
-
-_ONNX_SUBFOLDER = "onnx"
 
 
 def _resolve_device(requested: str) -> str:
@@ -47,64 +48,92 @@ def _resolve_device(requested: str) -> str:
 
 
 def _onnx_provider(device: str) -> str:
-    """Map a resolved device string to an ONNX Runtime execution provider."""
     if device == "cuda":
         return "CUDAExecutionProvider"
     return "CPUExecutionProvider"
 
 
-@lru_cache(maxsize=1)
-def _load() -> tuple:
-    """Load ONNX session + tokenizer once per worker process.
+# ── per-model session + tokenizer cache ─────────────────────────────────
 
-    Downloads the ``onnx/`` subfolder from the HuggingFace model repo so
-    that external data files (``model.onnx_data``) are co-located with
-    ``model.onnx``.  The folder is cached by *huggingface_hub*.
-    """
-    settings = get_settings()
-    device = _resolve_device(settings.embedding_device)
+_SESSION_CACHE: dict[str, tuple] = {}
+
+
+def _load_model(cfg: EmbeddingModelConfig) -> tuple:
+    """Load (session, tokenizer, resolved_device) for *cfg*."""
+    if cfg.id in _SESSION_CACHE:
+        return _SESSION_CACHE[cfg.id]
+
+    device = _resolve_device(cfg.device)
     provider = _onnx_provider(device)
 
-    # Download the entire onnx/ subfolder (model.onnx + model.onnx_data + tokenizer).
+    # Download the ONNX subfolder so model.onnx_data is co-located.
     local_dir = snapshot_download(
-        settings.embedding_model,
-        allow_patterns=[f"{_ONNX_SUBFOLDER}/*"],
+        cfg.model_name,
+        allow_patterns=[f"{cfg.onnx_subfolder}/*"] if cfg.onnx_subfolder else None,
     )
-    onnx_dir = Path(local_dir) / _ONNX_SUBFOLDER
+    if cfg.onnx_subfolder:
+        onnx_dir = Path(local_dir) / cfg.onnx_subfolder
+    else:
+        onnx_dir = Path(local_dir)
 
-    onnx_model_path = str(onnx_dir / "model.onnx")
+    onnx_file = next(onnx_dir.glob("*.onnx"))
     tokenizer = AutoTokenizer.from_pretrained(str(onnx_dir))
 
     available = set(ort.get_available_providers())
     use_provider = provider if provider in available else "CPUExecutionProvider"
+    session = ort.InferenceSession(str(onnx_file), providers=[use_provider])
 
-    session = ort.InferenceSession(onnx_model_path, providers=[use_provider])
-    return session, tokenizer, device
+    result = (session, tokenizer, device)
+    _SESSION_CACHE[cfg.id] = result
+    return result
 
+
+def _clear_session_cache() -> None:
+    """Force reload on next call (used after model switch)."""
+    _SESSION_CACHE.clear()
+
+
+# ── public API (backward-compatible) ────────────────────────────────────
 
 def model() -> ort.InferenceSession:
-    """Return the cached ONNX Runtime session (for introspection / testing)."""
-    return _load()[0]
+    """Return the active model's ONNX session."""
+    cfg = get_active_model()
+    return _load_model(cfg)[0]
 
 
-def embed(texts: list[str]) -> list[list[float]]:
+def embed(texts: list[str], *, cfg: EmbeddingModelConfig | None = None) -> list[list[float]]:
+    """Embed *texts* using the active (or explicitly passed) model.
+
+    If the model has ``passage_prefix``, it is prepended automatically.
+    Vectors are zero-padded to ``MAX_VECTOR_DIMENSION`` for pgvector.
+    """
+    if cfg is None:
+        cfg = get_active_model()
+
     EMBEDDING_REQUESTS.inc()
     EMBEDDING_BATCH_SIZE.observe(len(texts))
     started = time.perf_counter()
     try:
-        session, tokenizer, _ = _load()
+        session, tokenizer, _ = _load_model(cfg)
+
+        # Apply passage prefix if the model requires it.
+        if cfg.passage_prefix:
+            texts = [cfg.passage_prefix + t for t in texts]
 
         inputs = tokenizer(
             texts,
             padding=True,
             truncation=True,
-            max_length=512,
+            max_length=cfg.max_input_tokens,
             return_tensors="np",
         )
-        # Build the feed dict for ONNX Runtime using actual input names.
         valid = {i.name for i in session.get_inputs()}
         ort_inputs = {k: v for k, v in inputs.items() if k in valid}
-        (token_embeddings,) = session.run(None, ort_inputs)
+        # Some models (E5, XLM-R) need token_type_ids; add zeros if missing.
+        if "token_type_ids" in valid and "token_type_ids" not in ort_inputs:
+            ort_inputs["token_type_ids"] = np.zeros_like(inputs["input_ids"])
+        outputs = session.run(None, ort_inputs)
+        token_embeddings: np.ndarray = outputs[0]
 
         # Mean-pool over token embeddings, respecting the attention mask.
         attention_mask: np.ndarray = inputs["attention_mask"]
@@ -116,39 +145,83 @@ def embed(texts: list[str]) -> list[list[float]]:
         # L2-normalize.
         norms = np.linalg.norm(pooled, axis=1, keepdims=True)
         embeddings = pooled / norms
+
+        # Convert to list and zero-pad to MAX_VECTOR_DIMENSION.
+        raw = embeddings.tolist()
+        return [cfg.pad_vector(v) for v in raw]
     except Exception:
         EMBEDDING_FAILURES.inc()
         raise
     finally:
         EMBEDDING_DURATION.observe(time.perf_counter() - started)
-    return embeddings.tolist()
 
 
-def dimension() -> int:
-    """Return the embedding dimension by probing the ONNX model's output shape."""
-    session, tokenizer, _ = _load()
-    dummy = tokenizer("test", return_tensors="np")
-    valid = {i.name for i in session.get_inputs()}
-    ort_inputs = {k: v for k, v in dummy.items() if k in valid}
-    outputs = session.run(None, ort_inputs)
-    return int(outputs[0].shape[-1])
+def embed_query(query: str, *, cfg: EmbeddingModelConfig | None = None) -> list[float]:
+    """Embed a single query string with query_prefix if needed."""
+    if cfg is None:
+        cfg = get_active_model()
 
+    EMBEDDING_REQUESTS.inc()
+    started = time.perf_counter()
+    try:
+        session, tokenizer, _ = _load_model(cfg)
+
+        text = (cfg.query_prefix + query) if cfg.query_prefix else query
+        inputs = tokenizer(
+            [text],
+            padding=True,
+            truncation=True,
+            max_length=cfg.max_input_tokens,
+            return_tensors="np",
+        )
+        valid = {i.name for i in session.get_inputs()}
+        ort_inputs = {k: v for k, v in inputs.items() if k in valid}
+        if "token_type_ids" in valid and "token_type_ids" not in ort_inputs:
+            ort_inputs["token_type_ids"] = np.zeros_like(inputs["input_ids"])
+        outputs = session.run(None, ort_inputs)
+        token_embeddings: np.ndarray = outputs[0]
+
+        attention_mask: np.ndarray = inputs["attention_mask"]
+        mask = np.expand_dims(attention_mask, axis=-1)
+        summed = np.sum(token_embeddings * mask, axis=1)
+        counts = np.clip(mask.sum(axis=1), a_min=1e-9, a_max=None)
+        pooled = summed / counts
+        norms = np.linalg.norm(pooled, axis=1, keepdims=True)
+        vec = (pooled / norms)[0].tolist()
+        return cfg.pad_vector(vec)
+    except Exception:
+        EMBEDDING_FAILURES.inc()
+        raise
+    finally:
+        EMBEDDING_DURATION.observe(time.perf_counter() - started)
+
+
+def dimension(cfg: EmbeddingModelConfig | None = None) -> int:
+    """Return the actual (unpadded) embedding dimension of the active model."""
+    if cfg is None:
+        cfg = get_active_model()
+    return cfg.dimension
+
+
+# ── worker startup contract ─────────────────────────────────────────────
 
 @worker_process_init.connect
 def validate_model_contract(**kwargs: object) -> None:
-    detected = dimension()
-    settings = get_settings()
-    validate_embedding_dimension(detected, settings.embedding_dimension)
-    device = _resolve_device(settings.embedding_device)
-    cache = Redis.from_url(settings.redis_url, decode_responses=True)
+    cfg = get_active_model()
+    detected = dimension(cfg)
+    validate_embedding_dimension(detected, cfg.dimension)
+    device = _resolve_device(cfg.device)
+    cache = Redis.from_url(get_settings().redis_url, decode_responses=True)
     try:
         cache.set(
             MODEL_READY_KEY,
             json.dumps(
                 {
-                    "model": settings.embedding_model,
+                    "model": cfg.model_name,
+                    "model_id": cfg.id,
                     "dimension": detected,
                     "device": device,
+                    "index_version": cfg.index_version,
                 }
             ),
             ex=60,

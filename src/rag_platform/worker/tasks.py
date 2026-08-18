@@ -9,6 +9,7 @@ from redis import Redis
 from sqlalchemy import delete, select
 
 from rag_platform.core.config import get_settings
+from rag_platform.core.embedding_registry import get_active_model
 from rag_platform.core.metrics import DOCUMENTS_FAILED, DOCUMENTS_INDEXED
 from rag_platform.db.models import (
     Chunk,
@@ -82,66 +83,86 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
         await session.commit()
         try:
             settings = get_settings()
+            cfg = get_active_model()
+
+            # Model-aware chunking: respect max_input_tokens.
+            # Approximate: 1 token ≈ 0.75 words for multilingual models.
+            max_words = int(cfg.max_input_tokens * 0.75)
+            target = min(settings.chunk_size_words, max_words)
+            overlap = min(settings.chunk_overlap_words, target // 3)
+
             drafts = chunk_text(
                 version.content,
                 settings.chunk_strategy,
-                ChunkingConfig(
-                    settings.chunk_size_words,
-                    settings.chunk_overlap_words,
-                    settings.chunk_min_words,
-                ),
+                ChunkingConfig(target, overlap, settings.chunk_min_words),
             )
             parts = [draft.content for draft in drafts]
-            vectors = embed(parts)
-            embedding_dimension = dimension()
-            if vectors and len(vectors[0]) != embedding_dimension:
-                raise RuntimeError("embedding dimension mismatch")
-            await session.execute(delete(Chunk).where(Chunk.document_version_id == version.id))
+            vectors = embed(parts, cfg=cfg)
+            embedding_dimension = dimension(cfg)
+            if vectors and len(vectors[0]) != 1024:  # padded dimension
+                raise RuntimeError("embedding padded dimension mismatch")
+            # Delete only embeddings for the current model (preserve other models).
+            await session.execute(
+                delete(ChunkEmbedding).where(
+                    ChunkEmbedding.model == cfg.model_name,
+                    ChunkEmbedding.chunk_id.in_(
+                        select(Chunk.id).where(
+                            Chunk.document_version_id == version.id
+                        )
+                    ),
+                )
+            )
             version.parser_version = settings.parser_version
             version.chunker_version = settings.chunker_version
-            version.embedding_model = settings.embedding_model
+            version.embedding_model = cfg.model_name
             version.embedding_revision = settings.embedding_revision
-            version.index_version = settings.index_version
+            version.index_version = cfg.index_version
             for draft, vector in zip(drafts, vectors, strict=True):
                 digest = content_hash(draft.content)
-                chunk = Chunk(
-                    id=stable_chunk_id(
-                        version.id,
-                        settings.chunker_version,
-                        draft.chunk_index,
-                        digest,
-                    ),
-                    document_id=version.document_id,
-                    document_version_id=version.id,
-                    tenant_id=version.tenant_id,
-                    project_id=version.project_id,
-                    owner_user_id=version.owner_user_id,
-                    collection=version.collection,
-                    chunk_index=draft.chunk_index,
-                    content=draft.content,
-                    token_count=len(draft.content.split()),
-                    language=version.language,
-                    content_hash=digest,
-                    metadata_=version.metadata_,
-                    source_type=version.document_type,
-                    source_id=version.external_document_id,
-                    section_title=draft.section_title,
-                    start_offset=draft.start_offset,
-                    end_offset=draft.end_offset,
-                    chunker_version=settings.chunker_version,
-                    index_version=settings.index_version,
-                    embedding_model=settings.embedding_model,
-                    embedding_dimension=embedding_dimension,
+                chunk_id = stable_chunk_id(
+                    version.id,
+                    settings.chunker_version,
+                    draft.chunk_index,
+                    digest,
                 )
-                session.add(chunk)
-                await session.flush()
+                # Reuse existing chunk if present (model-independent text).
+                existing = await session.get(Chunk, chunk_id)
+                if existing is None:
+                    chunk = Chunk(
+                        id=chunk_id,
+                        document_id=version.document_id,
+                        document_version_id=version.id,
+                        tenant_id=version.tenant_id,
+                        project_id=version.project_id,
+                        owner_user_id=version.owner_user_id,
+                        collection=version.collection,
+                        chunk_index=draft.chunk_index,
+                        content=draft.content,
+                        token_count=len(draft.content.split()),
+                        language=version.language,
+                        content_hash=digest,
+                        metadata_=version.metadata_,
+                        source_type=version.document_type,
+                        source_id=version.external_document_id,
+                        section_title=draft.section_title,
+                        start_offset=draft.start_offset,
+                        end_offset=draft.end_offset,
+                        chunker_version=settings.chunker_version,
+                        index_version=cfg.index_version,
+                        embedding_model=cfg.model_name,
+                        embedding_dimension=embedding_dimension,
+                    )
+                    session.add(chunk)
+                    await session.flush()
+                else:
+                    chunk = existing
                 session.add(
                     ChunkEmbedding(
                         chunk_id=chunk.id,
-                        model=settings.embedding_model,
+                        model=cfg.model_name,
                         model_revision=settings.embedding_revision,
                         backend=settings.embedding_backend,
-                        normalization=settings.embedding_normalization,
+                        normalization=cfg.normalization,
                         embedding_dimension=embedding_dimension,
                         embedding=vector,
                     )
@@ -302,19 +323,25 @@ def dispatch_outbox() -> int:
 
 
 @shared_task
-def embed_query(query: str) -> list[float]:
-    return embed([query])[0]
+def embed_query_task(query: str) -> list[float]:
+    """Embed a single query with active model's query_prefix."""
+    from rag_platform.worker.embeddings import embed_query
+
+    return embed_query(query)
 
 
 @shared_task
 def model_readiness_heartbeat() -> dict[str, object]:
-    settings = get_settings()
-    detected = dimension()
+    cfg = get_active_model()
+    detected = dimension(cfg)
     payload: dict[str, object] = {
-        "model": settings.embedding_model,
+        "model": cfg.model_name,
+        "model_id": cfg.id,
         "dimension": detected,
-        "device": settings.embedding_device,
+        "device": cfg.device,
+        "index_version": cfg.index_version,
     }
+    settings = get_settings()
     cache = Redis.from_url(settings.redis_url, decode_responses=True)
     try:
         cache.set(MODEL_READY_KEY, json.dumps(payload), ex=60)

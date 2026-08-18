@@ -43,6 +43,12 @@ async def test_readiness_requires_compatible_worker_heartbeat(
     cache = FakeRedis(heartbeat)
     monkeypatch.setattr(readiness, "Session", FakeSession)
     monkeypatch.setattr(readiness.Redis, "from_url", lambda *args, **kwargs: cache)
+    # Ensure get_active_model returns bge-m3 config (skip Redis lookup).
+    from rag_platform.core.embedding_registry import registry as _reg
+
+    monkeypatch.setattr(
+        readiness, "get_active_model", lambda: _reg["bge-m3"]
+    )
 
     ready, components = await readiness.readiness_status()
 

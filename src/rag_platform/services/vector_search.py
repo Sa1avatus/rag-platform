@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_platform.core.embedding_registry import get_active_model
 from rag_platform.db.models import Chunk, ChunkEmbedding, Document, DocumentVersion
 
 
@@ -18,7 +19,10 @@ async def vector_search(
     model: str,
     top_k: int,
 ) -> list[tuple[Chunk, str, float]]:
-    distance = ChunkEmbedding.embedding.cosine_distance(query_embedding)
+    cfg = get_active_model()
+    # Zero-pad the query vector so dimension matches the pgvector column.
+    padded_query = cfg.pad_vector(query_embedding)
+    distance = ChunkEmbedding.embedding.cosine_distance(padded_query)
     statement = (
         select(Chunk, Document.external_document_id, distance.label("distance"))
         .join(ChunkEmbedding, ChunkEmbedding.chunk_id == Chunk.id)
