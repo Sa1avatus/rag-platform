@@ -1,11 +1,9 @@
 import asyncio
-import json
 import uuid
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 
 from celery import shared_task
-from redis import Redis
 from sqlalchemy import delete, select
 
 from rag_platform.core.config import get_settings
@@ -26,7 +24,6 @@ from rag_platform.services.opensearch import (
     delete_document_chunks,
     index_chunks,
 )
-from rag_platform.services.readiness import MODEL_READY_KEY
 from rag_platform.services.reconciliation import reconcile
 from rag_platform.services.versioning import content_hash, stable_chunk_id
 from rag_platform.worker.embeddings import dimension, embed
@@ -69,7 +66,9 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
             return
         if job.payload.get("status") == "canceled":
             return
-        if version.status == Status.indexed:
+        # Idempotent: skip only if already indexed WITH THE CURRENT MODEL.
+        cfg = get_active_model()
+        if version.status == Status.indexed and version.embedding_model == cfg.model_name:
             job.payload = {**job.payload, "status": "completed", "idempotent": True}
             await session.commit()
             return
@@ -83,7 +82,6 @@ async def index_version(version_id: uuid.UUID, job_id: uuid.UUID) -> None:
         await session.commit()
         try:
             settings = get_settings()
-            cfg = get_active_model()
 
             # Model-aware chunking: respect max_input_tokens.
             # Approximate: 1 token ≈ 0.75 words for multilingual models.
@@ -328,26 +326,6 @@ def embed_query_task(query: str) -> list[float]:
     from rag_platform.worker.embeddings import embed_query
 
     return embed_query(query)
-
-
-@shared_task
-def model_readiness_heartbeat() -> dict[str, object]:
-    cfg = get_active_model()
-    detected = dimension(cfg)
-    payload: dict[str, object] = {
-        "model": cfg.model_name,
-        "model_id": cfg.id,
-        "dimension": detected,
-        "device": cfg.device,
-        "index_version": cfg.index_version,
-    }
-    settings = get_settings()
-    cache = Redis.from_url(settings.redis_url, decode_responses=True)
-    try:
-        cache.set(MODEL_READY_KEY, json.dumps(payload), ex=60)
-    finally:
-        cache.close()
-    return payload
 
 
 @shared_task

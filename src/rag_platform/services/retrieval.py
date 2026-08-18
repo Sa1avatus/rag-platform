@@ -276,6 +276,8 @@ async def _search(
         "filters": data.filters,
         "embedding_model": settings.embedding_model,
         "model_id": get_active_model().id,
+        "model_dimension": get_active_model().dimension,
+        "storage_dimension": 1024,
         "index_version": get_active_model().index_version,
         "embedding_dimension": get_active_model().dimension,
         "requested_mode": data.mode,

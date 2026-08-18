@@ -1,4 +1,6 @@
 import json
+import logging
+import threading
 import time
 from pathlib import Path
 
@@ -22,6 +24,8 @@ from rag_platform.core.metrics import (
 )
 from rag_platform.services.embedding_contract import validate_embedding_dimension
 from rag_platform.services.readiness import MODEL_READY_KEY
+
+log = logging.getLogger(__name__)
 
 
 def _resolve_device(requested: str) -> str:
@@ -85,6 +89,7 @@ def _load_model(cfg: EmbeddingModelConfig) -> tuple:
 
     result = (session, tokenizer, device)
     _SESSION_CACHE[cfg.id] = result
+    log.info("Loaded embedding model %s (dim=%d, device=%s)", cfg.id, cfg.dimension, device)
     return result
 
 
@@ -203,6 +208,42 @@ def dimension(cfg: EmbeddingModelConfig | None = None) -> int:
     return cfg.dimension
 
 
+# ── independent heartbeat thread ────────────────────────────────────────
+
+_HEARTBEAT_STOP = threading.Event()
+
+
+def _heartbeat_loop() -> None:
+    """Write model readiness to Redis every 20s, independent of worker pool."""
+    while not _HEARTBEAT_STOP.is_set():
+        try:
+            cfg = get_active_model()
+            detected = dimension(cfg)
+            device = _resolve_device(cfg.device)
+            settings = get_settings()
+            cache = Redis.from_url(settings.redis_url, decode_responses=True)
+            try:
+                cache.set(
+                    MODEL_READY_KEY,
+                    json.dumps(
+                        {
+                            "model": cfg.model_name,
+                            "model_id": cfg.id,
+                            "dimension": detected,
+                            "device": device,
+                            "index_version": cfg.index_version,
+                            "status": "ready",
+                        }
+                    ),
+                    ex=60,
+                )
+            finally:
+                cache.close()
+        except Exception:
+            log.warning("Heartbeat write failed", exc_info=True)
+        _HEARTBEAT_STOP.wait(timeout=20)
+
+
 # ── worker startup contract ─────────────────────────────────────────────
 
 @worker_process_init.connect
@@ -211,7 +252,13 @@ def validate_model_contract(**kwargs: object) -> None:
     detected = dimension(cfg)
     validate_embedding_dimension(detected, cfg.dimension)
     device = _resolve_device(cfg.device)
-    cache = Redis.from_url(get_settings().redis_url, decode_responses=True)
+    log.info(
+        "Model contract validated: %s dim=%d device=%s",
+        cfg.model_name, detected, device,
+    )
+    # Write initial heartbeat.
+    settings = get_settings()
+    cache = Redis.from_url(settings.redis_url, decode_responses=True)
     try:
         cache.set(
             MODEL_READY_KEY,
@@ -222,9 +269,14 @@ def validate_model_contract(**kwargs: object) -> None:
                     "dimension": detected,
                     "device": device,
                     "index_version": cfg.index_version,
+                    "status": "ready",
                 }
             ),
             ex=60,
         )
     finally:
         cache.close()
+    # Start independent heartbeat thread (one per worker process).
+    t = threading.Thread(target=_heartbeat_loop, daemon=True, name="embedding-heartbeat")
+    t.start()
+    log.info("Heartbeat thread started (20s interval)")

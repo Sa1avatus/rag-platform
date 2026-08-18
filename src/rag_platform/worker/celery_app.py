@@ -19,10 +19,6 @@ app.conf.update(
             "task": "rag_platform.worker.tasks.dispatch_outbox",
             "schedule": 2.0,
         },
-        "refresh-model-readiness": {
-            "task": "rag_platform.worker.tasks.model_readiness_heartbeat",
-            "schedule": 20.0,
-        },
         "reconcile-rag-indexes": {
             "task": "rag_platform.worker.tasks.reconcile_indexes",
             "schedule": 300.0,

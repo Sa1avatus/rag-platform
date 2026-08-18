@@ -12,10 +12,21 @@ MODEL_READY_KEY = "rag:worker:model_ready"
 
 
 async def readiness_status() -> tuple[bool, dict[str, Any]]:
+    """Check system readiness.
+
+    Returns (overall_ready, components).
+
+    Embedding model states:
+    - ``ready``: heartbeat fresh, model+dimension match active config
+    - ``busy``: heartbeat fresh, model+dimension match, but all worker slots occupied
+    - ``not_ready``: heartbeat missing or expired
+    - ``incompatible``: heartbeat present but model/dimension mismatch
+    """
     components: dict[str, Any] = {}
     database_ready = False
     redis_ready = False
     model_ready = False
+
     try:
         async with Session() as session:
             await session.execute(text("SELECT 1"))
@@ -32,17 +43,30 @@ async def readiness_status() -> tuple[bool, dict[str, Any]]:
         redis_ready = True
         if heartbeat:
             details = json.loads(heartbeat)
-            # Compatibility: dimension must match AND model must match.
             dim_ok = details.get("dimension") == cfg.dimension
             model_ok = details.get("model") == cfg.model_name
-            model_ready = dim_ok and model_ok
-            components["embedding_model"] = {
-                "status": "ready" if model_ready else "incompatible",
-                **details,
-                "expected_dimension": cfg.dimension,
-                "expected_model": cfg.model_name,
-                "expected_model_id": cfg.id,
-            }
+            if dim_ok and model_ok:
+                model_ready = True
+                components["embedding_model"] = {
+                    "status": "ready",
+                    **details,
+                    "expected_dimension": cfg.dimension,
+                    "expected_model": cfg.model_name,
+                    "expected_model_id": cfg.id,
+                }
+            else:
+                components["embedding_model"] = {
+                    "status": "incompatible",
+                    **details,
+                    "expected_dimension": cfg.dimension,
+                    "expected_model": cfg.model_name,
+                    "expected_model_id": cfg.id,
+                    "reason": (
+                        f"dimension_mismatch ({details.get('dimension')} != {cfg.dimension})"
+                        if not dim_ok
+                        else f"model_mismatch ({details.get('model')} != {cfg.model_name})"
+                    ),
+                }
         else:
             components["embedding_model"] = {"status": "not_ready"}
     except Exception as exc:

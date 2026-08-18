@@ -76,10 +76,27 @@ class EmbeddingModelConfig:
         )
 
     # ── vector helpers ──────────────────────────────────────────────────
+    @property
+    def storage_dimension(self) -> int:
+        """Physical vector size used in pgvector (MAX_VECTOR_DIMENSION)."""
+        from rag_platform.core.embedding_registry import MAX_VECTOR_DIMENSION
+
+        return MAX_VECTOR_DIMENSION
+
     def pad_vector(self, vector: list[float]) -> list[float]:
-        """Zero-pad *vector* to ``MAX_VECTOR_DIMENSION``."""
-        if self._padding > 0:
-            return vector + [0.0] * self._padding
+        """Zero-pad *vector* to ``MAX_VECTOR_DIMENSION``.
+
+        Raises ``ValueError`` if the vector is already larger than the
+        storage dimension (would require truncation which is never safe).
+        """
+        if len(vector) > self.storage_dimension:
+            raise ValueError(
+                f"Vector dimension {len(vector)} exceeds storage dimension "
+                f"{self.storage_dimension} — cannot pad"
+            )
+        diff = self.storage_dimension - len(vector)
+        if diff > 0:
+            return vector + [0.0] * diff
         return vector
 
     @property
