@@ -52,7 +52,7 @@ services:
       start_period: 60s
     deploy:
       resources:
-        limits: {memory: 6G}
+        limits: {memory: 12G}
         reservations:
           devices:
             - driver: nvidia
@@ -89,9 +89,12 @@ services:
     restart: unless-stopped
   rag-redis:
     image: redis:7.4.2-alpine
-    command: redis-server --appendonly yes
+    entrypoint: ["/entrypoint.sh"]
+    command: ["redis-server", "--appendonly", "yes"]
     ports: ["127.0.0.1:56379:6379"]
-    volumes: ["rag_redis:/data"]
+    volumes:
+      - rag_redis:/data
+      - ./scripts/redis-entrypoint.sh:/entrypoint.sh:ro
     healthcheck: {test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 3s, retries: 20}
     restart: unless-stopped
   rag-minio:

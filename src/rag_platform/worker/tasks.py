@@ -1,8 +1,10 @@
 import asyncio
+import json
 import uuid
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 
+import redis
 from celery import shared_task
 from sqlalchemy import delete, select
 
@@ -19,11 +21,13 @@ from rag_platform.db.models import (
 )
 from rag_platform.db.session import Session, engine
 from rag_platform.services.chunking import ChunkingConfig, chunk_text
+from rag_platform.services.embedding_reconciliation import reconcile_all_models
 from rag_platform.services.opensearch import (
     OpenSearchUnavailable,
     delete_document_chunks,
     index_chunks,
 )
+from rag_platform.services.readiness import MODEL_READY_KEY
 from rag_platform.services.reconciliation import reconcile
 from rag_platform.services.versioning import content_hash, stable_chunk_id
 from rag_platform.worker.embeddings import dimension, embed
@@ -321,11 +325,24 @@ def dispatch_outbox() -> int:
 
 
 @shared_task
-def embed_query_task(query: str) -> list[float]:
-    """Embed a single query with active model's query_prefix."""
-    from rag_platform.worker.embeddings import embed_query
+def embed_query_task(query: str) -> str:
+    """Embed a single query with active model's query_prefix.
 
-    return embed_query(query)
+    Stores the vector in Redis directly (bypassing Celery result backend)
+    to avoid JSON corruption of large payloads under concurrent load.
+    Returns the Redis key for the caller to read the result from.
+    """
+    from rag_platform.worker.embeddings import embed_query as _embed
+
+    vec = _embed(query)
+    settings = get_settings()
+    key = f"rag:embed-result:{uuid.uuid4().hex}"
+    r = redis.Redis.from_url(settings.redis_url, decode_responses=False)
+    try:
+        r.set(key, json.dumps(vec), ex=120)
+    finally:
+        r.close()
+    return key
 
 
 @shared_task
@@ -340,3 +357,48 @@ def reconcile_indexes() -> dict[str, int]:
 @shared_task
 def run_evaluation_task(run_id: str) -> None:
     run_async(evaluate_run(uuid.UUID(run_id)))
+
+
+@shared_task
+def reconcile_missing_embeddings() -> dict[str, int]:
+    """Periodic task: fill missing embeddings for all registered models."""
+    return run_async(reconcile_all_models())
+
+
+@shared_task(
+    autoretry_for=(ConnectionError, redis.ConnectionError, redis.TimeoutError),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=5,
+)
+def heartbeat_embedding_worker() -> None:
+    """Periodic heartbeat: write model readiness to Redis every 15s.
+
+    Replaces the daemon thread approach which died silently on Redis outages.
+    Celery Beat manages scheduling and retries, making this resilient to
+    transient network failures.
+    """
+    cfg = get_active_model()
+    detected = dimension(cfg)
+    from rag_platform.worker.embeddings import _resolve_device
+
+    device = _resolve_device(cfg.device)
+    settings = get_settings()
+    cache = redis.Redis.from_url(settings.redis_url, decode_responses=True)
+    try:
+        cache.set(
+            MODEL_READY_KEY,
+            json.dumps(
+                {
+                    "model": cfg.model_name,
+                    "model_id": cfg.id,
+                    "dimension": detected,
+                    "device": device,
+                    "index_version": cfg.index_version,
+                    "status": "ready",
+                }
+            ),
+            ex=45,
+        )
+    finally:
+        cache.close()

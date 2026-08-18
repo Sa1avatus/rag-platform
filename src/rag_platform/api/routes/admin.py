@@ -1268,7 +1268,7 @@ async def embeddings() -> dict[str, object]:
     """Return all registered embedding models with their status."""
     models = await all_models_status()
     active = await embedding_profile()
-    return {"active": active, "models": models}
+    return {**active, "models": models}
 
 
 @router.post("/models/embeddings/check")

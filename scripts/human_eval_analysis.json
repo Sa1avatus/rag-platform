@@ -1,0 +1,864 @@
+{
+  "n_queries": 40,
+  "human_metrics": {
+    "Recall@5": {
+      "e5_mean": 0.5009821428571428,
+      "e5_ci": [
+        0.40736582341269845,
+        0.5961924603174603
+      ],
+      "bge_mean": 0.316031746031746,
+      "bge_ci": [
+        0.19738988095238102,
+        0.43841369047619055
+      ],
+      "delta": -0.18495039682539682,
+      "winner": "~"
+    },
+    "MRR@5": {
+      "e5_mean": 0.6683333333333333,
+      "e5_ci": [
+        0.5432916666666667,
+        0.7967083333333331
+      ],
+      "bge_mean": 0.33,
+      "bge_ci": [
+        0.20081250000000003,
+        0.46335416666666657
+      ],
+      "delta": -0.3383333333333333,
+      "winner": "E5"
+    },
+    "nDCG@5": {
+      "e5_mean": 0.5522233605661906,
+      "e5_ci": [
+        0.44178480344325904,
+        0.6617474190439555
+      ],
+      "bge_mean": 0.2905953761626692,
+      "bge_ci": [
+        0.178406456370462,
+        0.4051016870228956
+      ],
+      "delta": -0.2616279844035214,
+      "winner": "E5"
+    },
+    "Recall@10": {
+      "e5_mean": 0.85,
+      "e5_ci": [
+        0.75,
+        0.95
+      ],
+      "bge_mean": 0.525,
+      "bge_ci": [
+        0.375,
+        0.675
+      ],
+      "delta": -0.32499999999999996,
+      "winner": "E5"
+    },
+    "MRR@10": {
+      "e5_mean": 0.6746825396825397,
+      "e5_ci": [
+        0.5496656746031746,
+        0.8013923611111111
+      ],
+      "bge_mean": 0.34256944444444437,
+      "bge_ci": [
+        0.2169322916666667,
+        0.47444444444444445
+      ],
+      "delta": -0.3321130952380953,
+      "winner": "E5"
+    },
+    "nDCG@10": {
+      "e5_mean": 0.6584454117200265,
+      "e5_ci": [
+        0.5560890125105423,
+        0.7612720850461249
+      ],
+      "bge_mean": 0.3648390870075069,
+      "bge_ci": [
+        0.2479209789939377,
+        0.48266457490462267
+      ],
+      "delta": -0.2936063247125196,
+      "winner": "E5"
+    }
+  },
+  "automated_metrics": {
+    "Recall@5": {
+      "e5_mean": 0.29035340334269844,
+      "e5_ci": [
+        0.24397318338419696,
+        0.341095285454845
+      ],
+      "bge_mean": 0.036350996709134276,
+      "bge_ci": [
+        0.02232885270762368,
+        0.05248058277048054
+      ],
+      "delta": -0.25400240663356416,
+      "winner": "E5"
+    },
+    "Recall@10": {
+      "e5_mean": 0.49402102706842127,
+      "e5_ci": [
+        0.4423551940241253,
+        0.5532081117736913
+      ],
+      "bge_mean": 0.06196826016932231,
+      "bge_ci": [
+        0.03985011923766797,
+        0.08636522171337102
+      ],
+      "delta": -0.43205276689909894,
+      "winner": "E5"
+    },
+    "Recall@20": {
+      "e5_mean": 0.8535840585544946,
+      "e5_ci": [
+        0.8061184442887471,
+        0.8947058914102796
+      ],
+      "bge_mean": 0.10143657789438479,
+      "bge_ci": [
+        0.07168498608975084,
+        0.1348488824974939
+      ],
+      "delta": -0.7521474806601098,
+      "winner": "E5"
+    },
+    "MRR@5": {
+      "e5_mean": 0.7765350877192982,
+      "e5_ci": [
+        0.6971381578947369,
+        0.8493585526315789
+      ],
+      "bge_mean": 0.23399122807017542,
+      "bge_ci": [
+        0.14824013157894736,
+        0.3256578947368421
+      ],
+      "delta": -0.5425438596491228,
+      "winner": "E5"
+    },
+    "MRR@10": {
+      "e5_mean": 0.7823830409356725,
+      "e5_ci": [
+        0.7088614766081872,
+        0.8546217105263157
+      ],
+      "bge_mean": 0.2441468253968254,
+      "bge_ci": [
+        0.1597129542606516,
+        0.3344201649958229
+      ],
+      "delta": -0.538236215538847,
+      "winner": "E5"
+    },
+    "MRR@20": {
+      "e5_mean": 0.7861702495990422,
+      "e5_ci": [
+        0.7136905138849798,
+        0.8571372909211532
+      ],
+      "bge_mean": 0.24858210618252166,
+      "bge_ci": [
+        0.1641752307403277,
+        0.33875915616393454
+      ],
+      "delta": -0.5375881434165206,
+      "winner": "E5"
+    },
+    "nDCG@5": {
+      "e5_mean": 0.6951697349220404,
+      "e5_ci": [
+        0.6197909439809716,
+        0.7644906032208614
+      ],
+      "bge_mean": 0.1649349086722156,
+      "bge_ci": [
+        0.10172568574442441,
+        0.23081342933464233
+      ],
+      "delta": -0.5302348262498248,
+      "winner": "E5"
+    },
+    "nDCG@10": {
+      "e5_mean": 0.6936094626175363,
+      "e5_ci": [
+        0.6247558735044686,
+        0.7545294004564292
+      ],
+      "bge_mean": 0.14952945782070182,
+      "bge_ci": [
+        0.09256337565786098,
+        0.20957132940661452
+      ],
+      "delta": -0.5440800047968345,
+      "winner": "E5"
+    },
+    "nDCG@20": {
+      "e5_mean": 0.7750058443880368,
+      "e5_ci": [
+        0.7201942295804281,
+        0.8240922253471175
+      ],
+      "bge_mean": 0.13888850155742571,
+      "bge_ci": [
+        0.08976161681610491,
+        0.19318551286999366
+      ],
+      "delta": -0.636117342830611,
+      "winner": "E5"
+    }
+  },
+  "win_loss": {
+    "e5_wins": 26,
+    "bge_wins": 10,
+    "ties": 4
+  },
+  "per_query": [
+    {
+      "query": "Data Engineer Apache Spark ETL",
+      "pair_id": "782b460771f5",
+      "e5_recall@5": 0.3333333333333333,
+      "bge_recall@5": 1.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.8609101556836468,
+      "bge_ndcg@5": 1.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.9402703313317613,
+      "bge_ndcg@10": 1.0
+    },
+    {
+      "query": "\u0420\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a Python Django PostgreSQL",
+      "pair_id": "9fb1b7cdb1ce",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.7142857142857143,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 1.0,
+      "bge_ndcg@5": 0.6084417613470554,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 1.0,
+      "bge_ndcg@10": 0.7139280470823052
+    },
+    {
+      "query": "\u0421\u0438\u0441\u0442\u0435\u043c\u043d\u044b\u0439 \u0430\u0440\u0445\u0438\u0442\u0435\u043a\u0442\u043e\u0440",
+      "pair_id": "8ca93b38fd46",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.6666666666666666,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 1.0,
+      "bge_ndcg@5": 0.7775523308121782,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 1.0,
+      "bge_ndcg@10": 0.9233194372931781
+    },
+    {
+      "query": "chunking strategy text splitting",
+      "pair_id": "67dbd52f6f2a",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.6666666666666666,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.5,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.6608397947263839,
+      "e5_recall@10": 0.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.0,
+      "bge_mrr@10": 0.5,
+      "e5_ndcg@10": 0.0,
+      "bge_ndcg@10": 0.7848693006025947
+    },
+    {
+      "query": "VLM technology",
+      "pair_id": "e1c77776ed84",
+      "e5_recall@5": 1.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 1.0,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 1.0,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "English language_level",
+      "pair_id": "28b68ba78c47",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 1.0,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.3333333333333333,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.5,
+      "e5_recall@10": 0.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.0,
+      "bge_mrr@10": 0.3333333333333333,
+      "e5_ndcg@10": 0.0,
+      "bge_ndcg@10": 0.5
+    },
+    {
+      "query": "hybrid search BM25 dense retrieval",
+      "pair_id": "c65fd6d9f707",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 0.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.0,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "\u041e\u043f\u044b\u0442 \u0440\u0430\u0437\u0432\u043e\u0440\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u044f \u043c\u043e\u0434\u0435\u043b\u0435\u0439 practical_experience",
+      "pair_id": "5ad569287c9a",
+      "e5_recall@5": 0.6666666666666666,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.7715039881147672,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.8375564833796824,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "\u041a\u0443\u043b\u044c\u0442\u0443\u0440\u0430 \u0438\u0437\u043c\u0435\u0440\u0435\u043d\u0438\u044f \u043a\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438 \u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438 skill",
+      "pair_id": "439999f9c33a",
+      "e5_recall@5": 0.6,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.5463148455053497,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.1,
+      "e5_ndcg@10": 0.738278396025044,
+      "bge_ndcg@10": 0.2890648263178879
+    },
+    {
+      "query": "\u0432\u044b\u0441\u0448\u0435\u0435 \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435 education",
+      "pair_id": "6e67be85b267",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.8,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.7521109272785776,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.14285714285714285,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.43334518829986224,
+      "bge_ndcg@10": 0.8908010534528861
+    },
+    {
+      "query": "Backend \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a Go \u043c\u0438\u043a\u0440\u043e\u0441\u0435\u0440\u0432\u0438\u0441\u044b",
+      "pair_id": "6216cd7c6928",
+      "e5_recall@5": 0.375,
+      "bge_recall@5": 1.0,
+      "e5_mrr@5": 0.5,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.1826414510233752,
+      "bge_ndcg@5": 1.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.5,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.6084075270270743,
+      "bge_ndcg@10": 1.0
+    },
+    {
+      "query": "TGI technology",
+      "pair_id": "b77129f1a302",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 0.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.0,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "Site Reliability Engineer",
+      "pair_id": "71c589bba5bf",
+      "e5_recall@5": 1.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.9879538239787087,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9879538239787087,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "microservices gRPC REST API",
+      "pair_id": "9d3f0b76ce02",
+      "e5_recall@5": 1.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.9469024295259745,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9469024295259745,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "CI/CD skill",
+      "pair_id": "c8ca2996065b",
+      "e5_recall@5": 0.6666666666666666,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.7653606369886217,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9325210919548239,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "embedding model fine-tuning",
+      "pair_id": "697047dc5c7a",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 0.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.0,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "prompt engineering ChatGPT",
+      "pair_id": "754b8059538c",
+      "e5_recall@5": 0.6666666666666666,
+      "bge_recall@5": 1.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.5766666455144387,
+      "bge_ndcg@5": 1.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.6831312932610384,
+      "bge_ndcg@10": 1.0
+    },
+    {
+      "query": "LLM fine-tuning LoRA QLoRA",
+      "pair_id": "a881ad011901",
+      "e5_recall@5": 0.75,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.8241437773158405,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.1111111111111111,
+      "e5_ndcg@10": 0.8458011402678842,
+      "bge_ndcg@10": 0.36181498356361597
+    },
+    {
+      "query": "Machine Learning Engineer",
+      "pair_id": "e8dcca368a0a",
+      "e5_recall@5": 0.75,
+      "bge_recall@5": 0.5,
+      "e5_mrr@5": 0.5,
+      "bge_mrr@5": 0.2,
+      "e5_ndcg@5": 0.45989701029605684,
+      "bge_ndcg@5": 0.23719771276929622,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.5,
+      "bge_mrr@10": 0.2,
+      "e5_ndcg@10": 0.5481748640546681,
+      "bge_ndcg@10": 0.4415801103577823
+    },
+    {
+      "query": "RAG pipeline with vector search and reranking",
+      "pair_id": "cffb213dee5f",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.4580867977769692,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.5821321078799614,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "Python developer experience",
+      "pair_id": "be9752feb690",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.5555555555555556,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.6123883368301529,
+      "bge_ndcg@5": 0.5840898099002949,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.8146929374183608,
+      "bge_ndcg@10": 0.7785855089866259
+    },
+    {
+      "query": "Kubernetes skill",
+      "pair_id": "750f42fc3f34",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.3333333333333333,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.36331756126716835,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.3333333333333333,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.5936788073725308,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "problem-solving skills skill",
+      "pair_id": "dd129628c16d",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 0.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.0,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "Data Scientist NLP",
+      "pair_id": "b641cc0c9cae",
+      "e5_recall@5": 0.7142857142857143,
+      "bge_recall@5": 1.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.3333333333333333,
+      "e5_ndcg@5": 1.0,
+      "bge_ndcg@5": 0.5,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.3333333333333333,
+      "e5_ndcg@10": 0.9888009031441519,
+      "bge_ndcg@10": 0.5
+    },
+    {
+      "query": "\u043e\u0446\u0435\u043d\u043a\u0430 \u043a\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0433\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u0438 skill",
+      "pair_id": "88f88c100eba",
+      "e5_recall@5": 1.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.9197207891481876,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9197207891481876,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "Blockchain Developer Solidity Web3",
+      "pair_id": "25036dffb18c",
+      "e5_recall@5": 0.75,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.9595049392424512,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.125,
+      "e5_ndcg@10": 0.9865016464141503,
+      "bge_ndcg@10": 0.31546487678572877
+    },
+    {
+      "query": "Python FastAPI PostgreSQL Docker",
+      "pair_id": "77cb798d4e89",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.8333333333333334,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 1.0,
+      "bge_ndcg@5": 0.7312193581235961,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.9942224537445509,
+      "bge_ndcg@10": 0.787237967619544
+    },
+    {
+      "query": "System Architect distributed systems",
+      "pair_id": "b6dff852316f",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.2,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.23719771276929622,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.2,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.4415801103577824,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "Cloud Architect AWS Azure",
+      "pair_id": "109b1a6859cb",
+      "e5_recall@5": 0.3333333333333333,
+      "bge_recall@5": 0.5,
+      "e5_mrr@5": 0.5,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.3161638460360963,
+      "bge_ndcg@5": 0.6805853513638602,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.5,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.6209883981179052,
+      "bge_ndcg@10": 0.7647840352649549
+    },
+    {
+      "query": "ML-\u0438\u043d\u0436\u0435\u043d\u0435\u0440 \u2014 RAG, LLM / VLM JSC \u041c\u043e\u0434\u0435\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u0438 \u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435 \u0434\u0432\u043e\u0439\u043d\u0438\u043a\u0438",
+      "pair_id": "f5a7c7519a21",
+      "e5_recall@5": 0.4444444444444444,
+      "bge_recall@5": 1.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.830419897363192,
+      "bge_ndcg@5": 0.9733434704234325,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.9296577135079833,
+      "bge_ndcg@10": 0.9733434704234325
+    },
+    {
+      "query": "payroll benefits administration Canada US",
+      "pair_id": "e4d115740e02",
+      "e5_recall@5": 0.5555555555555556,
+      "bge_recall@5": 0.5714285714285714,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 1.0,
+      "e5_ndcg@5": 0.8177503273848066,
+      "bge_ndcg@5": 0.9159332700480359,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 1.0,
+      "e5_ndcg@10": 0.8500941176521744,
+      "bge_ndcg@10": 0.9776954938289855
+    },
+    {
+      "query": "Security Engineer penetration testing",
+      "pair_id": "b4d3cf5c6386",
+      "e5_recall@5": 0.6,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.9357996741960194,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9821396363235061,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "MLOps Engineer",
+      "pair_id": "4b0e3c8f7759",
+      "e5_recall@5": 0.6666666666666666,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.9580414003446834,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9845143292854158,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "ML/NLP experience experience",
+      "pair_id": "5a23ce3ec825",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.3333333333333333,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.3333333333333333,
+      "e5_ndcg@5": 0.5233139164942185,
+      "bge_ndcg@5": 0.3156484524795145,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.3333333333333333,
+      "e5_ndcg@10": 0.7503809513115559,
+      "bge_ndcg@10": 0.663438677598622
+    },
+    {
+      "query": "iOS Swift developer",
+      "pair_id": "76f3c9d4d8ee",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.25,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.3594343638640112,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.25,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.5601610317131915,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "\u0418\u043d\u0436\u0435\u043d\u0435\u0440 \u043c\u0430\u0448\u0438\u043d\u043d\u043e\u0433\u043e \u043e\u0431\u0443\u0447\u0435\u043d\u0438\u044f",
+      "pair_id": "9dc4954b2204",
+      "e5_recall@5": 0.0,
+      "bge_recall@5": 0.5,
+      "e5_mrr@5": 0.0,
+      "bge_mrr@5": 0.5,
+      "e5_ndcg@5": 0.0,
+      "bge_ndcg@5": 0.38685280723454163,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 0.1111111111111111,
+      "bge_mrr@10": 0.5,
+      "e5_ndcg@10": 0.3010299956639812,
+      "bge_ndcg@10": 0.5714285040141098
+    },
+    {
+      "query": "\u0430\u043d\u0430\u043b\u043e\u0433\u0438 vLLM/TGI/Ollama technology",
+      "pair_id": "5b5cd8bf4722",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.5729191687400303,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 1.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.16666666666666666,
+      "e5_ndcg@10": 0.8482236547102953,
+      "bge_ndcg@10": 0.3562071871080222
+    },
+    {
+      "query": "communication skills skill",
+      "pair_id": "88ab6c5a21b5",
+      "e5_recall@5": 1.0,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.25,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.43067655807339306,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.25,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.43067655807339306,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "async programming skill",
+      "pair_id": "c5c77b09612f",
+      "e5_recall@5": 0.6666666666666666,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 1.0,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.7653606369886217,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 1.0,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.9010126104210695,
+      "bge_ndcg@10": 0.0
+    },
+    {
+      "query": "\u041f\u0440\u043e\u0444\u0438\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 latency/throughput skill",
+      "pair_id": "941afc0f7b9c",
+      "e5_recall@5": 0.5,
+      "bge_recall@5": 0.0,
+      "e5_mrr@5": 0.2,
+      "bge_mrr@5": 0.0,
+      "e5_ndcg@5": 0.10654373218155079,
+      "bge_ndcg@5": 0.0,
+      "e5_recall@10": 1.0,
+      "bge_recall@10": 0.0,
+      "e5_mrr@10": 0.2,
+      "bge_mrr@10": 0.0,
+      "e5_ndcg@10": 0.35526514743439225,
+      "bge_ndcg@10": 0.0
+    }
+  ]
+}

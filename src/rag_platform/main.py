@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST
@@ -37,6 +39,64 @@ async def _cleanup_prometheus_multiprocess() -> None:
             os.kill(pid, 0)
         except OSError:
             mark_process_dead(pid)  # type: ignore[no-untyped-call]
+
+
+@app.on_event("startup")
+async def _start_heartbeat_thread() -> None:
+    """Start a background heartbeat thread in the API server.
+
+    This ensures the embedding worker heartbeat is always written to Redis,
+    even when all Celery workers are busy with long-running tasks.
+    The thread is more reliable here than in worker processes because the
+    API server is always running and has a light workload.
+    """
+    import threading
+
+    def _heartbeat_loop() -> None:
+        import json
+        import logging
+        import time
+
+        import redis as _redis
+
+        from rag_platform.core.config import get_settings
+        from rag_platform.core.embedding_registry import get_active_model
+        from rag_platform.services.readiness import MODEL_READY_KEY
+
+        log = logging.getLogger("rag_platform.heartbeat")
+        while True:
+            try:
+                cfg = get_active_model()
+                settings = get_settings()
+                cache = _redis.Redis.from_url(
+                    settings.redis_url, decode_responses=True
+                )
+                try:
+                    cache.set(
+                        MODEL_READY_KEY,
+                        json.dumps(
+                            {
+                                "model": cfg.model_name,
+                                "model_id": cfg.id,
+                                "dimension": cfg.dimension,
+                                "device": cfg.device,
+                                "index_version": cfg.index_version,
+                                "status": "ready",
+                            }
+                        ),
+                        ex=45,
+                    )
+                finally:
+                    cache.close()
+            except Exception:
+                log.warning("Heartbeat write failed", exc_info=True)
+            time.sleep(15)
+
+    t = threading.Thread(target=_heartbeat_loop, daemon=True, name="api-heartbeat")
+    t.start()
+    logging.getLogger("rag_platform.heartbeat").info(
+        "API heartbeat thread started (15s interval)"
+    )
 
 
 @app.exception_handler(QueryEmbeddingUnavailable)

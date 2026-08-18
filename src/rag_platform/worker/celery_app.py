@@ -9,7 +9,7 @@ app.conf.update(
     worker_prefetch_multiplier=1,
     task_reject_on_worker_lost=True,
     task_routes={
-        "rag_platform.worker.tasks.embed_query": {"queue": "search"},
+        "rag_platform.worker.tasks.embed_query_task": {"queue": "search"},
         "rag_platform.worker.tasks.*": {"queue": "indexing"},
     },
     task_default_retry_delay=5,
@@ -22,6 +22,10 @@ app.conf.update(
         "reconcile-rag-indexes": {
             "task": "rag_platform.worker.tasks.reconcile_indexes",
             "schedule": 300.0,
+        },
+        "reconcile-missing-embeddings": {
+            "task": "rag_platform.worker.tasks.reconcile_missing_embeddings",
+            "schedule": 120.0,
         },
     },
 )

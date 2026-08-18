@@ -10,6 +10,23 @@ dated `master`-branch milestones so that the initial implementation history rema
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `503 vector search is unavailable` errors under concurrent load caused by
+  Celery's JSON result backend corrupting large embedding vectors (1024-dim) when
+  multiple search and indexing tasks run simultaneously. The worker now stores the
+  embedding result in Redis directly and returns only the key reference, bypassing
+  the Celery result backend entirely.
+- Fixed Celery task routing: `embed_query_task` was matched by the `.*` wildcard
+  and routed to the `indexing` queue instead of `search`. Updated the route to
+  use the exact task name.
+- Added retry logic (3 attempts with backoff) in `embed_query` for transient
+  decode errors from the Celery result backend.
+- Added API-side heartbeat thread to ensure embedding model readiness is always
+  reported even when Celery workers are saturated with indexing tasks.
+- Fixed `/models/embeddings` admin endpoint to return flat model profile alongside
+  model list for consistent UI consumption.
+
 ### Changed
 
 - Added collection creation and masked service-key authorization controls to the administrative

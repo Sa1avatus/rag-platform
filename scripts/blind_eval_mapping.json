@@ -1,0 +1,1162 @@
+{
+  "782b460771f5": {
+    "query": "Data Engineer Apache Spark ETL",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "6d0525ee-2d6d-572a-be46-4f11e3bc62be",
+      "4c8dea7f-ef21-554c-b52b-0e27e29bc455",
+      "1ceba7e9-e3ff-537f-869e-fe24ebcd124c",
+      "e050ed7b-d98d-59f2-8836-2d9652d31621",
+      "49b1353c-ccee-5e75-be17-8c3c41a3fe89",
+      "13992338-1f32-53a8-8a0a-d24dfe5099b5",
+      "3a513d37-1a41-57af-97aa-8f9e070d52d8",
+      "f9ecfb24-530c-5add-ba5b-62cff6fd2dd8",
+      "ecb61556-2702-54bd-aea6-dce06078aed9",
+      "1ffb5885-3adf-54c0-94d8-e6cd41c8d90e"
+    ],
+    "bge_chunk_ids": [
+      "e15810a3-7353-55f6-bf0e-8285dc2938ca",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "19371574-2c87-57c1-9d2e-e9f35455a6fe",
+      "5d1ce2ba-9a3d-5fea-9d3b-abb696ba203f",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "c96434ff-68da-5260-9666-b3049bf1bb86",
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "e648330a-a521-56d4-865e-6d1759468db1",
+      "c298abd9-3457-554e-a042-36782b6b12c0"
+    ]
+  },
+  "9fb1b7cdb1ce": {
+    "query": "Разработчик Python Django PostgreSQL",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "6a6bf194-ac94-5330-967b-117691d52cdd",
+      "011f7c23-77a9-59d7-abd4-726149e896a1",
+      "87823694-d41b-5d46-a5b9-a0de0eeaf7c9",
+      "a1dc30ab-6b23-5fcf-a13e-6d2b57048e09",
+      "e2aec961-4449-59a6-ac5a-b58ab345d3a9",
+      "6c7836eb-fcb4-5480-8eb6-7b4482bad0fb",
+      "946090c0-5a9c-5b2a-9a63-e9ab29f63b1c",
+      "092b8a7b-963a-547b-98aa-2d3ccb2abf7b",
+      "cd0701a6-dbd4-52cd-8005-46916a0f0c28",
+      "2b3a60f1-dcbe-589d-8a36-11bdf5041903"
+    ],
+    "bge_chunk_ids": [
+      "6e4156a0-fa80-5422-85d7-e10037256366",
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "d7558ea7-a778-5775-b202-b792525811e7",
+      "ebd8759d-8a7d-53c7-87dd-87d41f26b08d",
+      "e82570f7-e65a-55ac-9160-57e9fd4c3ab1",
+      "75393e4b-7353-5de6-b1d0-54d4ff60925d",
+      "aa2525ec-dd71-5d6e-a22c-19cd5ee903f9",
+      "e34328ec-0e16-5317-b6ec-6ba9c0a7366a",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "6843f192-2f8f-5dfa-bd52-9cef4316d3ca"
+    ]
+  },
+  "8ca93b38fd46": {
+    "query": "Системный архитектор",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "b2a914ef-19b2-5b99-a34f-3c32941a9efa",
+      "1a4af0a3-c24a-5511-a78b-8f47f9abea71",
+      "3006bbb4-770a-53f4-851e-ce5cffff0d75",
+      "250f9d30-1691-5346-8db4-69266250ba63",
+      "a12bf4de-f7b0-5984-ad8d-48fe1a909931",
+      "d87fff26-c0dc-57fd-8c54-e40f4c7a975c",
+      "4318b8f7-ca5d-5181-8788-2dea73069dd1",
+      "d2dc38be-4972-5d30-917d-35cd23d9c312",
+      "4bf0f65d-8e49-5cf6-a9d5-554ae14afd0f",
+      "e8c912de-51d7-5639-9f1b-013725063550"
+    ],
+    "bge_chunk_ids": [
+      "d9577668-5add-54e7-b823-fa8ae75d28ee",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "58e6df92-1cfd-5595-ac3b-b2981ec2249d",
+      "2cb2d44c-86b9-50a2-a608-6e071f96c20d",
+      "698b0fae-234e-533c-85a5-f0cb647ac4e1",
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "a1473212-1459-548d-b488-92788b4cfea6"
+    ]
+  },
+  "67dbd52f6f2a": {
+    "query": "chunking strategy text splitting",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "3a513d37-1a41-57af-97aa-8f9e070d52d8",
+      "0e0b003f-24c4-5638-aca9-4eccc8a2584a",
+      "2fa138f8-fbd7-53a8-9340-2384c9138101",
+      "b2cfe0fb-2fb8-52ce-9c03-4985815929fa",
+      "06bc5551-cc76-5c04-ab81-bccdd357d37f",
+      "8930c285-1cbe-59b6-bdc3-dbf4eee22e6f",
+      "f9ecfb24-530c-5add-ba5b-62cff6fd2dd8",
+      "04c493b7-7235-563f-a3a9-d611d76b52db",
+      "a510babe-f9c4-56e0-b1e7-f604146098a9",
+      "91006a77-51e5-5edd-a175-e4cd596da30e"
+    ],
+    "bge_chunk_ids": [
+      "3f6ede73-aaec-51fc-b559-a7931687af8c",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "fbef2b34-b7a1-5906-81a2-79abdb65dac6",
+      "da72d7a8-a74f-5114-b348-7f8923a52880",
+      "b01d499c-38f9-5065-9573-a674f43e6424",
+      "1c72d309-c6af-5af6-a149-3983ef2551b9",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "f5a52caa-1f14-5166-8169-c238126fef01",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "97a41aa2-1a47-51b8-9ce3-21704d706d0b"
+    ]
+  },
+  "e1c77776ed84": {
+    "query": "VLM technology",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "78c995ff-b14f-560d-9f27-af144649078b",
+      "d934ae18-e8f4-52c8-8123-bdbdd9994700",
+      "880ec24a-fef0-568b-a6f1-d14c24b6938f",
+      "5499be31-b1c1-5d54-8389-fc1bf4cf839b",
+      "c7d2591a-8eb9-576f-a8ab-20c17d30f077",
+      "c0d19cac-7684-5a72-8d28-96941ab90c1a",
+      "869ed060-2519-55f8-8c67-2b8cd78c26f6",
+      "e7841168-39c9-5d0b-bd28-e78137538861",
+      "be9d8035-bb8c-5dbd-af84-fd257e6bf87a",
+      "3a513d37-1a41-57af-97aa-8f9e070d52d8"
+    ],
+    "bge_chunk_ids": [
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "da42cfae-4097-5d29-87bb-3b809c8de250",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "1cef0f37-1937-50f7-a99d-873b32e2d3dc",
+      "d2f257d8-7393-5a4c-8f99-f0c6a9fdfbea",
+      "ef204e90-c855-5207-8e31-63d3354ff356",
+      "09078dba-7028-5add-8c91-8b854378adc2"
+    ]
+  },
+  "28b68ba78c47": {
+    "query": "English language_level",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "5caf5865-b91a-5368-8e73-0519cffaf6f3",
+      "d73b7d95-6688-563a-b6a6-074ab22223fd",
+      "6ff11278-d2e9-5255-9740-7ed2b76aff63",
+      "64653ada-3a5b-5231-8ae0-eb24525445af",
+      "4a3ca906-19e6-5999-a3bb-7a410773f2fb",
+      "417bc779-f562-5d48-a235-4783d57f3c1d",
+      "3d4d5819-3565-561c-8063-8ec07e8ac429",
+      "3a1415b3-4ccc-5315-9b32-e0df23dfb896",
+      "1bd4d44e-11a0-55b6-8eb2-b2f362681244",
+      "0e2c4244-f298-5cf8-8da5-3acadd77bc41"
+    ],
+    "bge_chunk_ids": [
+      "fbd51354-5358-5098-93e3-61243279b11f",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "bbbae728-c10a-57b9-b172-4aacbafb5ae1",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "e648330a-a521-56d4-865e-6d1759468db1",
+      "da708a74-c63a-5ede-af1b-83b1ba04ad4b",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2"
+    ]
+  },
+  "c65fd6d9f707": {
+    "query": "hybrid search BM25 dense retrieval",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "d599dfe2-391a-5beb-a45a-4774494de182",
+      "73def8d7-b508-5a83-86ad-2f9dc9f23387",
+      "c79de9f3-8dd8-54d3-a8ff-e02896367bcb",
+      "3a513d37-1a41-57af-97aa-8f9e070d52d8",
+      "b470fbe9-cd54-5674-9558-8c4b4786e706",
+      "ec6cfab3-1eb1-5b73-88fb-62ca93b7eb2e",
+      "23226057-aaac-511f-98ea-71fb028cf0ba",
+      "7e0e9e95-a061-5cee-993f-554badb08ced",
+      "5e00e005-bbd4-54c0-9865-00ea644535cd",
+      "e748f8fc-ef7b-5c4e-aef4-7cf47ad6d41c"
+    ],
+    "bge_chunk_ids": [
+      "e955580d-1b0e-5318-9e5d-07b25b53d2d0",
+      "6caf2983-7ad5-51ff-980c-a4c8e820bdd0",
+      "1e8cfe9b-64db-54cb-af9b-bfd87db400ac",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "f5a52caa-1f14-5166-8169-c238126fef01",
+      "9e7fa5df-9115-5e42-8f3c-433aa69d4b25",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "689e818c-bf44-5d31-9b91-456b1448d539",
+      "b3a8b8eb-f31c-5f3a-9f13-e99330a7f7ed"
+    ]
+  },
+  "5ad569287c9a": {
+    "query": "Опыт разворачивания моделей practical_experience",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "a8f47d18-a60a-57cf-979f-1d728a21b109",
+      "192a60c1-d976-5b4d-ae54-12176313d342",
+      "5720d867-d538-5439-accd-f278d43a4960",
+      "e75dcdb1-00a0-571d-b3c9-631209948067",
+      "aa699f3d-3c61-55ed-8a81-2ea9008a0480",
+      "cc233196-bcce-536f-8b1a-bd41a4842d5a",
+      "872dcff0-3a3c-56bb-b7a6-87f620f3c57c",
+      "2bb3fad0-d5e7-5c43-a713-cc76b49ec314",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "32395d43-7737-5229-ac94-351e3f1edbbd"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "5c69c5fb-9d92-59d1-943b-39d3cd764eb8",
+      "bbbae728-c10a-57b9-b172-4aacbafb5ae1",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "1e8cfe9b-64db-54cb-af9b-bfd87db400ac",
+      "aa2525ec-dd71-5d6e-a22c-19cd5ee903f9",
+      "fbd51354-5358-5098-93e3-61243279b11f",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "da72d7a8-a74f-5114-b348-7f8923a52880"
+    ]
+  },
+  "439999f9c33a": {
+    "query": "Культура измерения качества и производительности skill",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "54192ea9-1e79-504b-8159-e6ab4c6fee9c",
+      "a70d2ffb-67bd-5f8a-8740-718872c8e472",
+      "750be5fe-67f6-51e0-b325-cf1a6c6849af",
+      "280435df-ef47-5366-9d3b-241ba08f878d",
+      "18b938cc-29b2-5af3-b4ba-51f4a9e54d9c",
+      "996986a6-86c0-5d78-b74d-963762494a23",
+      "d87fff26-c0dc-57fd-8c54-e40f4c7a975c",
+      "192a60c1-d976-5b4d-ae54-12176313d342",
+      "cc233196-bcce-536f-8b1a-bd41a4842d5a",
+      "c7c004a5-6091-5218-8365-42c61dcb752c"
+    ],
+    "bge_chunk_ids": [
+      "698b0fae-234e-533c-85a5-f0cb647ac4e1",
+      "97a41aa2-1a47-51b8-9ce3-21704d706d0b",
+      "73f1888e-6d82-51e7-9f91-922abfe4b3fb",
+      "0874bbec-d297-5b37-87d5-8dab94f6f5b7",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "25764c60-072e-560f-8f85-96f546ecb84f",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "fbef2b34-b7a1-5906-81a2-79abdb65dac6",
+      "fbd51354-5358-5098-93e3-61243279b11f",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0"
+    ]
+  },
+  "6e67be85b267": {
+    "query": "высшее образование education",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "07ba5f6f-71d9-5c0e-bb95-2ca48e681131",
+      "39077aeb-744c-56ac-99a1-2f2a0977b707",
+      "6672f59d-4afe-5c4e-8a94-81eca3674507",
+      "329da8c7-2d77-5e22-9680-c31c521e6010",
+      "165b7437-36dc-5216-9dd7-abe9daf26318",
+      "46d9689a-98f8-5b9d-b7cb-7213ec572909",
+      "2b80e929-ee16-54f8-957e-254c7944e724",
+      "7e3bf6a6-6392-5db5-a491-01a94226b23e",
+      "810e7426-aa8b-5d67-b798-be4fa5e32b69",
+      "48029200-e193-542a-963b-27b19dd70b6f"
+    ],
+    "bge_chunk_ids": [
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "fbd51354-5358-5098-93e3-61243279b11f",
+      "e648330a-a521-56d4-865e-6d1759468db1",
+      "f5a52caa-1f14-5166-8169-c238126fef01",
+      "bbbae728-c10a-57b9-b172-4aacbafb5ae1",
+      "1e8cfe9b-64db-54cb-af9b-bfd87db400ac",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "698b0fae-234e-533c-85a5-f0cb647ac4e1",
+      "73f1888e-6d82-51e7-9f91-922abfe4b3fb"
+    ]
+  },
+  "6216cd7c6928": {
+    "query": "Backend разработчик Go микросервисы",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "3bbe97fd-a598-5f39-a928-ae6c0318f57e",
+      "211962eb-8ca9-5dd1-a451-cbc904a63fa8",
+      "9671ceec-eb5f-5f51-bf9d-bd92befc244c",
+      "5e488cc7-b3bb-5ce1-be97-379d3d37b194",
+      "94eed1ec-0b72-56ef-9c83-e865648e9142",
+      "965cb797-f9a3-5dbb-a34c-5a3f668d62d2",
+      "c794cad9-5063-5327-a1b6-861a916fe3a6",
+      "89570d3b-d6cb-5e48-983d-321fd5a610a6",
+      "8b47a50b-2c2a-51b6-80e3-812461b3271c",
+      "f729fb2c-622d-5cb2-8eab-910a5abcc402"
+    ],
+    "bge_chunk_ids": [
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "75393e4b-7353-5de6-b1d0-54d4ff60925d",
+      "e82570f7-e65a-55ac-9160-57e9fd4c3ab1",
+      "e34328ec-0e16-5317-b6ec-6ba9c0a7366a",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "89a9adfe-541f-5975-86ac-89dc2a9a2771",
+      "1200933b-933d-5672-b8ce-995a0eb6ee6b",
+      "698b0fae-234e-533c-85a5-f0cb647ac4e1"
+    ]
+  },
+  "b77129f1a302": {
+    "query": "TGI technology",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "17ecb0e9-d208-524e-a879-eedfc5809f74",
+      "b8513097-0323-5849-8c6e-cf3ab5542b41",
+      "5c069b4f-8211-5451-9847-2d271db42014",
+      "9b97a88f-bccb-5c1f-9051-04d9df2d96f6",
+      "a0fe069a-5470-5000-8568-7ebf002b3429",
+      "27546bf4-db15-51a9-8eae-dc8563f4a5f3",
+      "740f9539-78ca-5bf7-9a62-0530bf8df74a",
+      "26462692-a02c-55e7-be91-4cc41b95d8cc",
+      "d402764b-8e7d-5c74-8d7f-63446e0cc1b6",
+      "fe6c5fa2-e5d4-5e57-86ad-300bc09ddb32"
+    ],
+    "bge_chunk_ids": [
+      "da42cfae-4097-5d29-87bb-3b809c8de250",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "f0fa918c-d02d-59eb-8978-ddecbcef67f5",
+      "c298abd9-3457-554e-a042-36782b6b12c0",
+      "e34328ec-0e16-5317-b6ec-6ba9c0a7366a",
+      "58e6df92-1cfd-5595-ac3b-b2981ec2249d",
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a"
+    ]
+  },
+  "71c589bba5bf": {
+    "query": "Site Reliability Engineer",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "c88b5109-af54-5a0f-a34d-3274cb55f420",
+      "0320c718-02a3-5bc3-a92d-89f86d3a2017",
+      "c9bd65db-c65e-53e2-98dd-841d2b164cd2",
+      "84631bbb-d752-59d7-8015-064dff066941",
+      "a68b776c-985f-5870-8b37-2d36395e7408",
+      "8930c285-1cbe-59b6-bdc3-dbf4eee22e6f",
+      "1e43df85-245c-5120-8874-1bdb8be7add5",
+      "740f9539-78ca-5bf7-9a62-0530bf8df74a",
+      "244537bf-30b8-5154-b1cc-b4e2c38c774f",
+      "23c152a9-0f23-502e-860c-7850aee6aa12"
+    ],
+    "bge_chunk_ids": [
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "c5ea442f-8774-5183-8397-adf41841f0da",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "9e7fa5df-9115-5e42-8f3c-433aa69d4b25",
+      "d880fc6d-1cfb-5a11-b327-91a479a1631b"
+    ]
+  },
+  "9d3f0b76ce02": {
+    "query": "microservices gRPC REST API",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "227ac61e-08fc-5e47-a50c-6d1461fb09af",
+      "74f976ea-59af-5b60-a189-e04c6a843ff0",
+      "5e488cc7-b3bb-5ce1-be97-379d3d37b194",
+      "9671ceec-eb5f-5f51-bf9d-bd92befc244c",
+      "1ceba7e9-e3ff-537f-869e-fe24ebcd124c",
+      "49b1353c-ccee-5e75-be17-8c3c41a3fe89",
+      "e82570f7-e65a-55ac-9160-57e9fd4c3ab1",
+      "fc66c363-ce19-5907-9c84-e5819237dc16",
+      "2be23416-dcf4-5ede-9fe7-a7003a821272",
+      "48d8f1c6-423f-5d57-a95d-2bda6e51d70a"
+    ],
+    "bge_chunk_ids": [
+      "b3a8b8eb-f31c-5f3a-9f13-e99330a7f7ed",
+      "7e68d117-0502-5eb6-bc2e-43d4aa4d4ce4",
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "75393e4b-7353-5de6-b1d0-54d4ff60925d",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "d880fc6d-1cfb-5a11-b327-91a479a1631b",
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "19371574-2c87-57c1-9d2e-e9f35455a6fe",
+      "89a9adfe-541f-5975-86ac-89dc2a9a2771"
+    ]
+  },
+  "c8ca2996065b": {
+    "query": "CI/CD skill",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "38f50bcb-0bd7-5c0b-ba9a-f16b22f5e6b6",
+      "5bcc276d-49da-5603-bf3d-e1562d1b79c1",
+      "fdf31246-7340-5ba9-a311-51e42041c0c1",
+      "c97b15d6-b7e0-5bc5-bac3-d16810620226",
+      "4368e2f8-e5ec-5cd0-82ad-7114085bfa9d",
+      "48b2d443-42c1-5034-ab99-c1a305c031a0",
+      "ee6c95bf-5b36-51b4-aeae-4c96192c476d",
+      "306964ba-21b3-590b-9fc1-f675942b6b1b",
+      "916ab9c4-3eba-5003-9781-eea86d3b6c9d",
+      "e3a938a8-9d42-5888-bc65-ce5e4a622365"
+    ],
+    "bge_chunk_ids": [
+      "c5ea442f-8774-5183-8397-adf41841f0da",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "628c4294-02ec-5e31-80b3-8810c88a3edf",
+      "01e4c4eb-dd68-5e93-b439-5ad0cd8dac0d",
+      "b0c4e9b9-60a8-582e-944f-6937700b84d1",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "5d1ce2ba-9a3d-5fea-9d3b-abb696ba203f",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7"
+    ]
+  },
+  "697047dc5c7a": {
+    "query": "embedding model fine-tuning",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "3c390348-b4c5-5458-81e3-9a2e3dbfb0eb",
+      "3a513d37-1a41-57af-97aa-8f9e070d52d8",
+      "13e972a7-d9a0-53bf-a3ae-162bd94d1f49",
+      "f00c62ad-fc13-5dd4-97ad-dbe78379edfc",
+      "fcc7bd67-07d0-5ebe-96a8-b889794bc7e2",
+      "880ec24a-fef0-568b-a6f1-d14c24b6938f",
+      "5499be31-b1c1-5d54-8389-fc1bf4cf839b",
+      "17ecb0e9-d208-524e-a879-eedfc5809f74",
+      "9c3002f3-32a6-5d55-a297-7e161c0206ee",
+      "ee94cac2-d7a9-5524-9594-ca50718d4035"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "b3a8b8eb-f31c-5f3a-9f13-e99330a7f7ed",
+      "c96434ff-68da-5260-9666-b3049bf1bb86",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7",
+      "b01d499c-38f9-5065-9573-a674f43e6424"
+    ]
+  },
+  "754b8059538c": {
+    "query": "prompt engineering ChatGPT",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "80afbe1c-685d-5e40-bcd7-a726660a5ddf",
+      "b355254b-e5c2-5330-89ff-de8666f821b1",
+      "5caf5865-b91a-5368-8e73-0519cffaf6f3",
+      "244537bf-30b8-5154-b1cc-b4e2c38c774f",
+      "0a3445a9-d9dc-5185-91b8-71dcb0b8037b",
+      "8d761992-482f-5395-818a-050eb3b7f918",
+      "49b1353c-ccee-5e75-be17-8c3c41a3fe89",
+      "91006a77-51e5-5edd-a175-e4cd596da30e",
+      "c97b15d6-b7e0-5bc5-bac3-d16810620226",
+      "4778f5ea-ee09-5e89-9b88-91f8dbc8ea72"
+    ],
+    "bge_chunk_ids": [
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "e34328ec-0e16-5317-b6ec-6ba9c0a7366a",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "4034b42c-b6ed-5367-a351-ed842b360920",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7",
+      "e235624f-ecf2-51f8-ade4-2562cc1e239e",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20"
+    ]
+  },
+  "a881ad011901": {
+    "query": "LLM fine-tuning LoRA QLoRA",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "9face862-f256-5ad5-a21c-19968ae31e39",
+      "6448909b-c000-58f4-8a7d-2d85bf7a6b79",
+      "be9d8035-bb8c-5dbd-af84-fd257e6bf87a",
+      "5c2a359c-2513-5c54-803b-bd6e9c4a87a3",
+      "872dcff0-3a3c-56bb-b7a6-87f620f3c57c",
+      "e75dcdb1-00a0-571d-b3c9-631209948067",
+      "a8f47d18-a60a-57cf-979f-1d728a21b109",
+      "dd7ec6cc-8827-555a-9c8a-1a3e86a6d599",
+      "d25b0740-22c6-5613-a4c9-d793ac1a9710",
+      "3e74daeb-563e-5842-b081-66c8051c987d"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "5c69c5fb-9d92-59d1-943b-39d3cd764eb8",
+      "ee5f1ded-7639-52ee-9c5f-76636d9a0bf3",
+      "1a7d834c-0c08-5912-b0c0-f271ab04bf96",
+      "73f1888e-6d82-51e7-9f91-922abfe4b3fb",
+      "0874bbec-d297-5b37-87d5-8dab94f6f5b7"
+    ]
+  },
+  "e8dcca368a0a": {
+    "query": "Machine Learning Engineer",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "c4136abe-6b6d-59f3-b405-52060b35f26f",
+      "e461ae0f-9f30-5f83-b5da-93496338c5cd",
+      "c7f0bf3b-14b2-5900-b243-19dcc110d924",
+      "dacbe9fb-5360-549c-8884-33ca26bcbbf2",
+      "4694306c-8925-5283-b4d4-35a1fb788dce",
+      "573d89c8-2cf7-555e-b64d-316d804b3e3e",
+      "13992338-1f32-53a8-8a0a-d24dfe5099b5",
+      "f40e6419-5386-5087-a9bf-17de617b1a67",
+      "b49a0464-0fc9-58a4-8ca4-ff456636eb52",
+      "ef2a0580-df2c-5de0-abc8-78a305ac387d"
+    ],
+    "bge_chunk_ids": [
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "c96434ff-68da-5260-9666-b3049bf1bb86",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "87e79f5d-ff30-5680-85cc-cd05c5224690",
+      "b3a8b8eb-f31c-5f3a-9f13-e99330a7f7ed",
+      "ef204e90-c855-5207-8e31-63d3354ff356",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "19371574-2c87-57c1-9d2e-e9f35455a6fe",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda"
+    ]
+  },
+  "cffb213dee5f": {
+    "query": "RAG pipeline with vector search and reranking",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "b341e9c8-1818-59bd-a07f-d80bdd0664f0",
+      "b10917d8-7c74-57ef-a24e-512c3bac255f",
+      "d1333981-4c75-57fe-9cbf-456a28ea0ab7",
+      "6259968e-ad7f-5bf7-9793-87855e75f871",
+      "425ecd22-7d26-5902-8abb-81f72f5a86e3",
+      "3e7b6634-bfef-57cd-9c9e-34f73d31f09c",
+      "6448909b-c000-58f4-8a7d-2d85bf7a6b79",
+      "ee94cac2-d7a9-5524-9594-ca50718d4035",
+      "38f50bcb-0bd7-5c0b-ba9a-f16b22f5e6b6",
+      "4778f5ea-ee09-5e89-9b88-91f8dbc8ea72"
+    ],
+    "bge_chunk_ids": [
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "bbbae728-c10a-57b9-b172-4aacbafb5ae1",
+      "6caf2983-7ad5-51ff-980c-a4c8e820bdd0",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "c5ea442f-8774-5183-8397-adf41841f0da",
+      "5c69c5fb-9d92-59d1-943b-39d3cd764eb8",
+      "d9577668-5add-54e7-b823-fa8ae75d28ee",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4"
+    ]
+  },
+  "be9752feb690": {
+    "query": "Python developer experience",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "6e4156a0-fa80-5422-85d7-e10037256366",
+      "e2aec961-4449-59a6-ac5a-b58ab345d3a9",
+      "f4db7b5b-c692-57bb-bd33-621799a33809",
+      "dc67e093-cae0-5958-8986-b197db9aedde",
+      "07796d91-b721-594e-8a44-9aecc763fd31",
+      "2fed9957-5ee2-5256-83c6-d706a19bb1fe",
+      "ebd8759d-8a7d-53c7-87dd-87d41f26b08d",
+      "f4490f64-8d8e-5d76-ae53-ccbe9d5e65d8",
+      "25522ea3-ca69-5a6a-8775-5be76d2e7d5a",
+      "2bc66b6b-3f62-556c-a66d-3adb0a69c0e6"
+    ],
+    "bge_chunk_ids": [
+      "6e4156a0-fa80-5422-85d7-e10037256366",
+      "ebd8759d-8a7d-53c7-87dd-87d41f26b08d",
+      "6843f192-2f8f-5dfa-bd52-9cef4316d3ca",
+      "e82570f7-e65a-55ac-9160-57e9fd4c3ab1",
+      "d7558ea7-a778-5775-b202-b792525811e7",
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "2ce7a203-46a3-5473-a307-8b7dc707225e",
+      "fe52ecbf-2e9b-5802-bd30-91d093c8d244",
+      "16bb29ed-e6a0-54a6-a89d-c8ee0ade5e68",
+      "a1dc30ab-6b23-5fcf-a13e-6d2b57048e09"
+    ]
+  },
+  "750f42fc3f34": {
+    "query": "Kubernetes skill",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "5caf5865-b91a-5368-8e73-0519cffaf6f3",
+      "48b2d443-42c1-5034-ab99-c1a305c031a0",
+      "18dde321-d780-51ef-9c7e-e64b16959b56",
+      "3a513d37-1a41-57af-97aa-8f9e070d52d8",
+      "8d761992-482f-5395-818a-050eb3b7f918",
+      "c97b15d6-b7e0-5bc5-bac3-d16810620226",
+      "4368e2f8-e5ec-5cd0-82ad-7114085bfa9d",
+      "dd05665a-8986-55c5-8e09-b18331b6e46e",
+      "cd5bdadf-34ea-5242-9915-640e15365b2b",
+      "789abada-3a7b-5c27-948f-b01646cc8766"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "1c72d309-c6af-5af6-a149-3983ef2551b9",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "fbd51354-5358-5098-93e3-61243279b11f",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "b8513097-0323-5849-8c6e-cf3ab5542b41",
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "b01d499c-38f9-5065-9573-a674f43e6424"
+    ]
+  },
+  "dd129628c16d": {
+    "query": "problem-solving skills skill",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "04c3d185-a4be-5995-8f45-5b9388001d54",
+      "ad0bc4c6-2d76-5a56-bbda-dba5fac1436b",
+      "941ac0a6-69bf-5587-8edd-b31a54bf284a",
+      "97249d40-2706-5179-b022-88d39b94abc5",
+      "a6b5cb8e-de13-5f7b-8b8b-a68442929b7f",
+      "681487fc-cbd8-5522-8728-9b8dc0737caa",
+      "47190f2f-4263-5b38-a9b5-ceb8dbb0b1d5",
+      "c1e1a3f8-655e-5c71-b2fe-ae6a11b520d4",
+      "ee6c95bf-5b36-51b4-aeae-4c96192c476d",
+      "a22e4994-c7ab-5cb1-8025-af402b65403e"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "fbef2b34-b7a1-5906-81a2-79abdb65dac6",
+      "da72d7a8-a74f-5114-b348-7f8923a52880",
+      "698b0fae-234e-533c-85a5-f0cb647ac4e1",
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "d9577668-5add-54e7-b823-fa8ae75d28ee",
+      "b01d499c-38f9-5065-9573-a674f43e6424",
+      "97a41aa2-1a47-51b8-9ce3-21704d706d0b",
+      "1c72d309-c6af-5af6-a149-3983ef2551b9",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b"
+    ]
+  },
+  "b641cc0c9cae": {
+    "query": "Data Scientist NLP",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "911f03f4-37f5-5e5a-b45e-3f89f863c245",
+      "060c2181-84ec-5e42-9f15-1bdfc246c22b",
+      "fc931156-d981-5e5d-b3be-737ac2e8900e",
+      "d18e5da8-e6a0-5e1a-8ce5-65c792ab7ee6",
+      "e06c7af6-4ecc-5610-a7df-dc4b33acd58f",
+      "573d89c8-2cf7-555e-b64d-316d804b3e3e",
+      "e75dcdb1-00a0-571d-b3c9-631209948067",
+      "fede9eb2-f169-5b91-b0e0-08754455679a",
+      "f9ecfb24-530c-5add-ba5b-62cff6fd2dd8",
+      "f40e6419-5386-5087-a9bf-17de617b1a67"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "e15810a3-7353-55f6-bf0e-8285dc2938ca",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "4034b42c-b6ed-5367-a351-ed842b360920",
+      "41c0504f-f7ea-5bb8-a3e0-1a83a9125f6c",
+      "75393e4b-7353-5de6-b1d0-54d4ff60925d",
+      "aa2525ec-dd71-5d6e-a22c-19cd5ee903f9",
+      "fbb27353-99e0-5f7d-82bc-16d4a2227bc1",
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "ae3aac7f-3633-501b-b76b-64f1f9230db7"
+    ]
+  },
+  "88f88c100eba": {
+    "query": "оценка качества генерации skill",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "c36e3b0a-8ac4-5516-91e5-f13666906ebc",
+      "e75dcdb1-00a0-571d-b3c9-631209948067",
+      "6dd0603f-84c5-5d20-91cf-df6ac4d39b86",
+      "5720d867-d538-5439-accd-f278d43a4960",
+      "62c72803-d072-5c49-9401-773f2f342ec8",
+      "8e7038e4-0be1-53f3-b6ba-0b0407bf2542",
+      "18c9fd6c-5ba4-5205-af09-b45a8597426f",
+      "95c57ca4-3121-5895-ad22-c3719ab1a320",
+      "d87fff26-c0dc-57fd-8c54-e40f4c7a975c",
+      "e9e2a50f-0411-5fc1-a84b-29a588df87b2"
+    ],
+    "bge_chunk_ids": [
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "4034b42c-b6ed-5367-a351-ed842b360920",
+      "73f1888e-6d82-51e7-9f91-922abfe4b3fb",
+      "0874bbec-d297-5b37-87d5-8dab94f6f5b7",
+      "b01d499c-38f9-5065-9573-a674f43e6424",
+      "1c72d309-c6af-5af6-a149-3983ef2551b9",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "fbef2b34-b7a1-5906-81a2-79abdb65dac6",
+      "da72d7a8-a74f-5114-b348-7f8923a52880",
+      "8ea26982-a644-5cde-b326-95bf5894ec93"
+    ]
+  },
+  "25036dffb18c": {
+    "query": "Blockchain Developer Solidity Web3",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "a99345da-6b3e-5b7c-89d7-e723df7ce60e",
+      "bd4a0923-9f7e-576d-bb11-176d10f36481",
+      "ea9385ab-92f6-5be9-897b-03de6273f9b0",
+      "26eb206e-160c-509b-a835-5acb5e634a2e",
+      "5caf5865-b91a-5368-8e73-0519cffaf6f3",
+      "e0fc0352-7697-5076-9f95-c69a5fe5eea0",
+      "689e818c-bf44-5d31-9b91-456b1448d539",
+      "c97b15d6-b7e0-5bc5-bac3-d16810620226",
+      "591a7ad0-b8a9-5032-91a9-0c5e9203bd89",
+      "b26d22d9-5c6a-52bb-8076-267dc4d93c39"
+    ],
+    "bge_chunk_ids": [
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "e82570f7-e65a-55ac-9160-57e9fd4c3ab1",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "a1473212-1459-548d-b488-92788b4cfea6",
+      "7422b99c-6c90-5a01-8fe5-1af64a04841c",
+      "75393e4b-7353-5de6-b1d0-54d4ff60925d",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "689e818c-bf44-5d31-9b91-456b1448d539",
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "e34328ec-0e16-5317-b6ec-6ba9c0a7366a"
+    ]
+  },
+  "77cb798d4e89": {
+    "query": "Python FastAPI PostgreSQL Docker",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "011f7c23-77a9-59d7-abd4-726149e896a1",
+      "28a1334d-5264-5e8a-ac25-8a6859c98dbb",
+      "d4072e15-5898-5249-b801-13bfe1a06735",
+      "092b8a7b-963a-547b-98aa-2d3ccb2abf7b",
+      "e2aec961-4449-59a6-ac5a-b58ab345d3a9",
+      "2be23416-dcf4-5ede-9fe7-a7003a821272",
+      "7d943053-8050-5330-8692-07f2b3bfc3cd",
+      "07796d91-b721-594e-8a44-9aecc763fd31",
+      "f729fb2c-622d-5cb2-8eab-910a5abcc402",
+      "c5046727-4fa6-588b-b2df-362c900efd8e"
+    ],
+    "bge_chunk_ids": [
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "aa2525ec-dd71-5d6e-a22c-19cd5ee903f9",
+      "75393e4b-7353-5de6-b1d0-54d4ff60925d",
+      "1200933b-933d-5672-b8ce-995a0eb6ee6b",
+      "849c8ddd-e088-5a61-aca7-63bf1ecc6fec",
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "e82570f7-e65a-55ac-9160-57e9fd4c3ab1",
+      "fbb27353-99e0-5f7d-82bc-16d4a2227bc1",
+      "7e68d117-0502-5eb6-bc2e-43d4aa4d4ce4",
+      "b01d499c-38f9-5065-9573-a674f43e6424"
+    ]
+  },
+  "b6dff852316f": {
+    "query": "System Architect distributed systems",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "738f2b61-9f96-5f75-8840-5dde41b00232",
+      "b10917d8-7c74-57ef-a24e-512c3bac255f",
+      "cf74408f-855d-5c12-9444-000f1350745b",
+      "5128078a-6bd3-51ed-9f12-b8470522ed40",
+      "1a4af0a3-c24a-5511-a78b-8f47f9abea71",
+      "baf2dd69-6773-5541-958c-45cf66668892",
+      "933a5392-c074-574f-8b60-d94a1dbcc871",
+      "98524aff-22db-5627-ac53-83cf1887b121",
+      "d0857cc8-35cf-527a-9e6f-361024a024b6",
+      "2e946d00-9ea0-5618-80e7-3f4476e1cc1b"
+    ],
+    "bge_chunk_ids": [
+      "d9577668-5add-54e7-b823-fa8ae75d28ee",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "990e9aea-3cee-50f3-ba10-e9fa0b563c34",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "58e6df92-1cfd-5595-ac3b-b2981ec2249d",
+      "43c11d0b-388d-536a-a23b-ababcc192e60",
+      "a1473212-1459-548d-b488-92788b4cfea6",
+      "d880fc6d-1cfb-5a11-b327-91a479a1631b",
+      "48513487-5f5b-54eb-81ae-3e3fd0b6f8c4"
+    ]
+  },
+  "109b1a6859cb": {
+    "query": "Cloud Architect AWS Azure",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "baf2dd69-6773-5541-958c-45cf66668892",
+      "0767f152-d21d-5ebb-93a1-882a90237bfd",
+      "5128078a-6bd3-51ed-9f12-b8470522ed40",
+      "6ee9f343-5ab6-5716-bfb5-95534919c91a",
+      "d34091a8-3a17-56e6-a288-71c267606d71",
+      "0bcf64c5-f118-593b-8ac6-6c32dc8a8e35",
+      "a79efdfa-e822-5547-8470-2e1d9a0f0fad",
+      "296c9240-d8ef-5470-82df-55c53c93c0ab",
+      "9ac94e7c-acb3-5980-bade-8882b32248d8",
+      "37f6e941-3141-554a-9ca7-304b0dda7793"
+    ],
+    "bge_chunk_ids": [
+      "48513487-5f5b-54eb-81ae-3e3fd0b6f8c4",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "ea13388e-5c0c-5cdd-a901-bd4beec61a83",
+      "52002e8d-ba1f-5f6a-9fa7-f61d5719aa9e",
+      "296c9240-d8ef-5470-82df-55c53c93c0ab",
+      "7528bfeb-c2eb-5d2d-92c0-fcf940376aaf",
+      "a1473212-1459-548d-b488-92788b4cfea6",
+      "e4e02574-3943-54ce-9235-dd3542c43041",
+      "012ff6d1-584e-5ea4-ba14-b46bd90d1f09"
+    ]
+  },
+  "f5a7c7519a21": {
+    "query": "ML-инженер — RAG, LLM / VLM JSC Моделирование и цифровые двойники",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "d1333981-4c75-57fe-9cbf-456a28ea0ab7",
+      "89d8dbb5-6aa3-5d9e-a8b5-a5c6f64ffc6e",
+      "aa699f3d-3c61-55ed-8a81-2ea9008a0480",
+      "5720d867-d538-5439-accd-f278d43a4960",
+      "e5e83cb8-30aa-5725-8695-d99a53e15276",
+      "192a60c1-d976-5b4d-ae54-12176313d342",
+      "a8f47d18-a60a-57cf-979f-1d728a21b109",
+      "934a8b6a-9021-515d-8ddb-1245d59d8425",
+      "e82da676-b24c-5d3d-a41f-ded9102d6eff",
+      "5c2a359c-2513-5c54-803b-bd6e9c4a87a3"
+    ],
+    "bge_chunk_ids": [
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "628c4294-02ec-5e31-80b3-8810c88a3edf",
+      "4034b42c-b6ed-5367-a351-ed842b360920"
+    ]
+  },
+  "e4d115740e02": {
+    "query": "payroll benefits administration Canada US",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "0c690285-4c2b-5d2c-b272-c8d86cc6280b",
+      "e8292900-8610-53aa-8caa-3c0a374f948d",
+      "fcc7bd67-07d0-5ebe-96a8-b889794bc7e2",
+      "45755997-3d2a-5301-9377-4189bbabeee6",
+      "20006844-3b76-528d-8d6e-1b61d7850980",
+      "1098d0db-4375-5c53-93b8-88e2301a470e",
+      "a86aa67e-7d9f-5681-a2a8-afc5db4ac0a9",
+      "133d519c-8a20-5312-b60e-bf363f78fedb",
+      "588ec7d4-617f-5cd4-b523-589af213fbff",
+      "065fd549-b0ff-514c-819e-905933551d70"
+    ],
+    "bge_chunk_ids": [
+      "fcc7bd67-07d0-5ebe-96a8-b889794bc7e2",
+      "45755997-3d2a-5301-9377-4189bbabeee6",
+      "e8292900-8610-53aa-8caa-3c0a374f948d",
+      "c8f40c1b-72bf-5b93-9c26-c10eb509ea8e",
+      "0c690285-4c2b-5d2c-b272-c8d86cc6280b",
+      "133d519c-8a20-5312-b60e-bf363f78fedb",
+      "a86aa67e-7d9f-5681-a2a8-afc5db4ac0a9",
+      "fbd51354-5358-5098-93e3-61243279b11f",
+      "1098d0db-4375-5c53-93b8-88e2301a470e",
+      "8da3a99f-80c4-5f82-9852-3fe769891b1a"
+    ]
+  },
+  "b4d3cf5c6386": {
+    "query": "Security Engineer penetration testing",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "5a985c48-b7aa-5040-8459-11cfabaa97ba",
+      "d5213cec-32fc-5d1f-9578-df7e0482acb9",
+      "02f4b2a0-499f-5994-8302-8261c48bedfb",
+      "98acd42d-e19b-5e25-bf20-7c1f6bd14301",
+      "1bc3d993-36cf-5f39-b27a-59a5044ccf27",
+      "661cedb0-0553-5e4c-9e6d-ce44047cbc63",
+      "c4f00009-efa9-5a73-a9e7-49efaba5aa86",
+      "c4ca30af-ebeb-5dc5-b89f-7aeca7b6b228",
+      "c9bd65db-c65e-53e2-98dd-841d2b164cd2",
+      "84631bbb-d752-59d7-8015-064dff066941"
+    ],
+    "bge_chunk_ids": [
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "4034b42c-b6ed-5367-a351-ed842b360920",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "d880fc6d-1cfb-5a11-b327-91a479a1631b",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "d9577668-5add-54e7-b823-fa8ae75d28ee",
+      "58f2cac8-6c06-5171-a981-d4e77472bf06",
+      "698b0fae-234e-533c-85a5-f0cb647ac4e1",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0"
+    ]
+  },
+  "4b0e3c8f7759": {
+    "query": "MLOps Engineer",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "69726ca5-04d6-5591-95a1-b38ba40835df",
+      "46c50096-5710-5597-9b28-77350d687b8f",
+      "c4ca30af-ebeb-5dc5-b89f-7aeca7b6b228",
+      "e461ae0f-9f30-5f83-b5da-93496338c5cd",
+      "9fd12972-255e-5aec-a58a-d7f1bf972c11",
+      "11e0816d-76d7-5a18-8000-cbb0b52b5c2a",
+      "a5958bcd-4db7-59a2-9153-03aa04ddd690",
+      "dacbe9fb-5360-549c-8884-33ca26bcbbf2",
+      "5caf5865-b91a-5368-8e73-0519cffaf6f3",
+      "740f9539-78ca-5bf7-9a62-0530bf8df74a"
+    ],
+    "bge_chunk_ids": [
+      "58f2cac8-6c06-5171-a981-d4e77472bf06",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "fb7c4c9e-e74f-52b6-9201-378e680cf75d",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "e15810a3-7353-55f6-bf0e-8285dc2938ca",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "4034b42c-b6ed-5367-a351-ed842b360920",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "c96434ff-68da-5260-9666-b3049bf1bb86"
+    ]
+  },
+  "5a23ce3ec825": {
+    "query": "ML/NLP experience experience",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "25522ea3-ca69-5a6a-8775-5be76d2e7d5a",
+      "5c69c5fb-9d92-59d1-943b-39d3cd764eb8",
+      "1bc3d993-36cf-5f39-b27a-59a5044ccf27",
+      "2c0be4ed-4e2a-5eb0-a903-90652c26b7ad",
+      "9fd12972-255e-5aec-a58a-d7f1bf972c11",
+      "6d43af06-6da1-5b0d-a9bb-fedc1bdb9157",
+      "13e972a7-d9a0-53bf-a3ae-162bd94d1f49",
+      "740f9539-78ca-5bf7-9a62-0530bf8df74a",
+      "fd4194bd-65b3-5e8b-9aad-9b33a853a01b",
+      "de69eeac-4ab0-5528-9720-79da20afa73c"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "5c69c5fb-9d92-59d1-943b-39d3cd764eb8",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "663740a8-8bb3-52d0-afc7-815d05a24fb2",
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "da72d7a8-a74f-5114-b348-7f8923a52880",
+      "fbef2b34-b7a1-5906-81a2-79abdb65dac6",
+      "43c11d0b-388d-536a-a23b-ababcc192e60"
+    ]
+  },
+  "76f3c9d4d8ee": {
+    "query": "iOS Swift developer",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "6e4156a0-fa80-5422-85d7-e10037256366",
+      "7b8a830b-5af4-5b77-85cf-8a1ff47d4bf1",
+      "e5fa6c4f-e709-5ad0-b6f1-4d9ff5afacca",
+      "e0fc0352-7697-5076-9f95-c69a5fe5eea0",
+      "b26d22d9-5c6a-52bb-8076-267dc4d93c39",
+      "6f17dc0f-5fc1-50ac-9bb9-a6d8b451fce9",
+      "ea9385ab-92f6-5be9-897b-03de6273f9b0",
+      "8d761992-482f-5395-818a-050eb3b7f918",
+      "89a9adfe-541f-5975-86ac-89dc2a9a2771",
+      "4674b691-8ff8-5f23-ab92-27a179f13b12"
+    ],
+    "bge_chunk_ids": [
+      "e34328ec-0e16-5317-b6ec-6ba9c0a7366a",
+      "6e3131e7-7df8-509c-971f-acbeb0643630",
+      "41c0504f-f7ea-5bb8-a3e0-1a83a9125f6c",
+      "9aa8c4b9-40ad-5a4e-8a2f-c666d6a0a1ef",
+      "58e6df92-1cfd-5595-ac3b-b2981ec2249d",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "d9577668-5add-54e7-b823-fa8ae75d28ee",
+      "da708a74-c63a-5ede-af1b-83b1ba04ad4b",
+      "ef204e90-c855-5207-8e31-63d3354ff356",
+      "7422b99c-6c90-5a01-8fe5-1af64a04841c"
+    ]
+  },
+  "9dc4954b2204": {
+    "query": "Инженер машинного обучения",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "324ac56a-8c9c-5539-960a-3fb72da7ca70",
+      "97f1e44b-63c9-511b-8ca4-4483f302697e",
+      "18b938cc-29b2-5af3-b4ba-51f4a9e54d9c",
+      "996986a6-86c0-5d78-b74d-963762494a23",
+      "3e74daeb-563e-5842-b081-66c8051c987d",
+      "e5e83cb8-30aa-5725-8695-d99a53e15276",
+      "71c561aa-0e1c-5ec2-99da-ffb8f09ba461",
+      "810e7426-aa8b-5d67-b798-be4fa5e32b69",
+      "5720d867-d538-5439-accd-f278d43a4960",
+      "48029200-e193-542a-963b-27b19dd70b6f"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "ef204e90-c855-5207-8e31-63d3354ff356",
+      "c96434ff-68da-5260-9666-b3049bf1bb86",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "e3cd2aa1-9ca8-5b31-82b4-f1a90f00bcd9",
+      "1213b948-379c-5fb0-ac89-f8ee8e062bb4",
+      "41c0504f-f7ea-5bb8-a3e0-1a83a9125f6c",
+      "87e79f5d-ff30-5680-85cc-cd05c5224690",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c"
+    ]
+  },
+  "5b5cd8bf4722": {
+    "query": "аналоги vLLM/TGI/Ollama technology",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "a8f47d18-a60a-57cf-979f-1d728a21b109",
+      "d25b0740-22c6-5613-a4c9-d793ac1a9710",
+      "872dcff0-3a3c-56bb-b7a6-87f620f3c57c",
+      "810e69ce-f85a-5b5a-b912-73ecd635e7a2",
+      "aa699f3d-3c61-55ed-8a81-2ea9008a0480",
+      "4fac3eb2-ee00-52e4-afa3-4526436c4d88",
+      "dd7ec6cc-8827-555a-9c8a-1a3e86a6d599",
+      "a4f302bd-76bd-5301-ac8e-22a491f2cfb2",
+      "f2100a43-64cd-5aa7-9507-078e1e4e8c44",
+      "7a5a37d5-dc0d-5669-a67c-7588faca4dd9"
+    ],
+    "bge_chunk_ids": [
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "da42cfae-4097-5d29-87bb-3b809c8de250",
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "7e91555a-25f3-58c1-8903-470dfd72e80f",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "d2f257d8-7393-5a4c-8f99-f0c6a9fdfbea"
+    ]
+  },
+  "88ab6c5a21b5": {
+    "query": "communication skills skill",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "4129420b-0e4c-517a-aebc-1a3e2b34856d",
+      "42c7880a-0487-544c-8005-ebf27a201f46",
+      "706f79ad-5cce-58e0-b493-ccddc2f2ce5a",
+      "6d43af06-6da1-5b0d-a9bb-fedc1bdb9157",
+      "fa65f6b7-c123-5e98-8de9-153404cf861b",
+      "91006a77-51e5-5edd-a175-e4cd596da30e",
+      "426ea5d5-55aa-550c-a650-57fd8c7151c2",
+      "81cdbe2a-dbe7-5b3b-969d-a6f288d51d63",
+      "72db8796-3631-5c8c-9c49-76ab355bc677",
+      "31389ff0-b2f3-57cb-89b3-c243597c9e25"
+    ],
+    "bge_chunk_ids": [
+      "ce050877-9e56-50c4-9f2d-425ba3975c9b",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "1c72d309-c6af-5af6-a149-3983ef2551b9",
+      "3f6ede73-aaec-51fc-b559-a7931687af8c",
+      "fbef2b34-b7a1-5906-81a2-79abdb65dac6",
+      "da72d7a8-a74f-5114-b348-7f8923a52880",
+      "97a41aa2-1a47-51b8-9ce3-21704d706d0b",
+      "b01d499c-38f9-5065-9573-a674f43e6424",
+      "8ea26982-a644-5cde-b326-95bf5894ec93",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2"
+    ]
+  },
+  "c5c77b09612f": {
+    "query": "async programming skill",
+    "set_a_model": "bge-m3",
+    "set_b_model": "e5-small",
+    "e5_chunk_ids": [
+      "c97b15d6-b7e0-5bc5-bac3-d16810620226",
+      "c603147c-7951-5279-ac92-32821b404630",
+      "a22e4994-c7ab-5cb1-8025-af402b65403e",
+      "ee6c95bf-5b36-51b4-aeae-4c96192c476d",
+      "48b2d443-42c1-5034-ab99-c1a305c031a0",
+      "368c0154-d276-5813-aa5a-9c0af2855e65",
+      "8c344363-aa9c-5797-9e8f-9ab8486cc4de",
+      "8d761992-482f-5395-818a-050eb3b7f918",
+      "5caf5865-b91a-5368-8e73-0519cffaf6f3",
+      "06e1b6b0-73df-52fc-8a66-e42e03bd91c2"
+    ],
+    "bge_chunk_ids": [
+      "628c4294-02ec-5e31-80b3-8810c88a3edf",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7",
+      "73f1888e-6d82-51e7-9f91-922abfe4b3fb",
+      "0874bbec-d297-5b37-87d5-8dab94f6f5b7",
+      "48513487-5f5b-54eb-81ae-3e3fd0b6f8c4",
+      "5d1ce2ba-9a3d-5fea-9d3b-abb696ba203f",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "e235624f-ecf2-51f8-ade4-2562cc1e239e",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "1c72d309-c6af-5af6-a149-3983ef2551b9"
+    ]
+  },
+  "941afc0f7b9c": {
+    "query": "Профилирование latency/throughput skill",
+    "set_a_model": "e5-small",
+    "set_b_model": "bge-m3",
+    "e5_chunk_ids": [
+      "a8f47d18-a60a-57cf-979f-1d728a21b109",
+      "cc233196-bcce-536f-8b1a-bd41a4842d5a",
+      "d25b0740-22c6-5613-a4c9-d793ac1a9710",
+      "40033003-a016-5544-bc0c-144530bee7e6",
+      "3ba42609-6803-5894-a2e0-640aca132351",
+      "c36e3b0a-8ac4-5516-91e5-f13666906ebc",
+      "2cd51938-9758-5ef8-96ba-ae445f1dbb29",
+      "d41de2d5-11d9-5efd-9dde-fe184a8650e7",
+      "e1d1d57c-48f8-547a-b9de-7c11a8ed2303",
+      "ea0b0f7b-e9b8-5c05-be3f-4b271591ce43"
+    ],
+    "bge_chunk_ids": [
+      "79b83d27-1beb-5e64-8c42-5a7f562228d0",
+      "e270aa15-977e-5b22-98fe-70e1e7453d20",
+      "4034b42c-b6ed-5367-a351-ed842b360920",
+      "c3f454f6-0b8f-5758-a03e-265fb5f3814f",
+      "560b6cd0-d357-5bba-ad4d-42fe655d8d9c",
+      "3d80bf97-00fa-595c-946f-1b314fadfdda",
+      "ecbf2fb7-a4ae-59ed-9240-fbbd65c9d3e2",
+      "f68c80c6-438c-5046-8fbd-54f6b86c409a",
+      "41f98683-6138-5d74-87ec-77f430450610",
+      "b5f0f7c6-172b-5217-8cbf-bc4b4d8dd4e7"
+    ]
+  }
+}
