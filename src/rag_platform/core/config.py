@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     admin_token: str = Field(min_length=16)
     api_key_pepper: str = Field(min_length=12)
     embedding_model: str = "BAAI/bge-m3"
-    embedding_backend: str = "sentence-transformers"
+    embedding_backend: str = "onnxruntime"
     embedding_revision: str = "default"
     embedding_normalization: str = "l2"
     embedding_device: str = "auto"

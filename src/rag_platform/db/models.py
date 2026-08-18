@@ -242,7 +242,7 @@ class ChunkEmbedding(Base, TimestampMixin):
     model: Mapped[str] = mapped_column(String(300))
     model_revision: Mapped[str] = mapped_column(String(200), default="default")
     backend: Mapped[str] = mapped_column(
-        String(100), default="sentence-transformers", server_default="sentence-transformers"
+        String(100), default="onnxruntime", server_default="onnxruntime"
     )
     normalization: Mapped[str] = mapped_column(String(40), default="l2", server_default="l2")
     embedding_dimension: Mapped[int] = mapped_column(Integer, default=1024, server_default="1024")

@@ -19,7 +19,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["mypy>=1.14,<2", "pytest>=8.3,<9", "pytest-asyncio>=0.25,<1", "pytest-cov>=6,<7", "respx>=0.22,<1", "ruff>=0.9,<1"]
-worker = ["sentence-transformers>=3.3,<4"]
+worker = ["onnxruntime>=1.20,<2", "transformers>=4.40,<5"]
+gpu = ["onnxruntime-gpu>=1.20,<2", "transformers>=4.40,<5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rag_platform"]
