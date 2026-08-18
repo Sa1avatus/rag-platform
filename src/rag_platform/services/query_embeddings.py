@@ -4,8 +4,6 @@ import logging
 from contextlib import suppress
 
 import redis as _sync_redis
-from redis.asyncio import Redis
-
 from celery.result import AsyncResult
 
 from rag_platform.core.config import get_settings
@@ -16,7 +14,11 @@ from rag_platform.worker.celery_app import app
 log = logging.getLogger(__name__)
 
 # Transient errors that warrant a retry (corrupt Redis result under concurrency).
-_RETRYABLE_ERRORS: tuple[type[Exception], ...] = (json.JSONDecodeError, ValueError, UnicodeDecodeError)
+_RETRYABLE_ERRORS: tuple[type[Exception], ...] = (
+    json.JSONDecodeError,
+    ValueError,
+    UnicodeDecodeError,
+)
 
 
 class QueryEmbeddingUnavailable(RuntimeError):
@@ -93,7 +95,9 @@ async def embed_query(query: str) -> list[float]:
             return vector
 
     # Should not be reached, but satisfy type checker.
-    raise QueryEmbeddingUnavailable("query embedding worker is unavailable") from last_exc
+    raise QueryEmbeddingUnavailable(
+        "query embedding worker is unavailable"
+    ) from last_exc
 
 
 def _read_embed_result(key: str, redis_url: str) -> list:
